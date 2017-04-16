@@ -1,0 +1,482 @@
+# This code ensures the panel integrated for the conductor:
+#       These are set of basic GUI utility for a conductor
+
+# K B Rahul, written on March 2017
+#===============Using Text boxes adjacent to choice box=========
+# Enter the string as displayed in the choice, followed by a <space> 
+# key
+#==============Using the List_people Class ======================
+# ----> Updates the status of each checked box (Colored => selected)
+# ----> Clicking on the label of a choice updates all the choices 
+# of that particular column.
+#        --> First Click selects all checked boxes of that column 
+#        --> Second Click deselects everything. 
+#        THIS MAY REQUIRE A FIX as both select all or deselect all 
+#        need to be independent.
+# ========= THINGS TO BE WORKED UPON==============
+# -----> A handler for the class which can be used to retrieve any 
+#        information on the panel
+require "debug"
+require "wxserpent"
+require "fancyslider.srp"
+require "list_draw"
+require "stage"
+
+STYLES = ["manual", "blues", "1564", "1564L", "6545", "6545L", "1545", "1545L", 
+          "ii7v7", "ii7v7L", "Pach", "PachL"]
+
+
+SCALETYPE_FROM_CHOICE = {
+    "maj":  "101011010101",
+    "min":  "101101011010",
+    "mixo": "101011010110",
+    "dori": "101101010110",
+    "blue": "100101110010",
+    "pent": "101010010100",
+    "mpen": "100101010010",
+    "chro": "111111111111",
+    "hmin": "101101011001",
+    "whol": "101010101010",
+    "oct0": "101101101101",
+    "oct1": "110110110110",
+    "oct2": "011011011011",
+    "phry": "110011011010" }
+
+SCALETYPE_CHOICES = ["maj", "min", "mixo", "dori", "blue", "pent", "mpen", 
+                     "chro", "hmin", "whol", "oct0", "oct1", "oct2", "phry"]
+
+
+CHORDTYPE_FROM_CHOICE = {
+    "maj":   "100010010000",
+    "min":   "100100010000",
+    "dom7":  "100010010010",
+    "maj7":  "100010010001",
+    "min7":  "100100010010",
+    "sus2":  "101000010000",
+    "sus4":  "100001010000",
+    "dim":   "100100100000",
+    "dim6":  "100100100100",
+    "dim7":  "100100100010",
+    "aug":   "100010001000",
+    "aug7":  "100010001010",
+    "augm":  "100010001001",
+    "mima":  "100100010001" }
+    
+CHORDTYPE_CHOICES = ["maj", "min", "dom7", "maj7", "min7", "sus2", "sus4",
+                     "dim", "dim6", "dim7", "aug", "aug7", "augm", "mima" ]
+
+
+CHORDTYPE_TO_SCALETYPE = {
+    "maj":   "maj",
+    "min":   "min",
+    "dom7":  "mixo",
+    "maj7":  "maj",
+    "min7":  "dori",
+    "sus2":  "maj",
+    "sus4":  "maj",
+    "dim":   "oct0",
+    "dim6":  "oct0",
+    "dim7":  "oct1",
+    "aug":   "whol",
+    "aug7":  "whol",
+    "augm":  "maj",
+    "mima":  "hmin" }
+    
+
+
+TRANS_CHOICES = ["C",  "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+
+INT_FROM_TRANS = {
+    "C": 0,  "C#": 1, "D": 2, "Eb": 3, "E": 4, "F": 5, "F#": 6,
+    "G": 7, "Ab": 8, "A": 9, "Bb": 10, "B": 11 }
+
+
+STYLE_CHOICES = ["sync", "rock"]
+
+CHORD_PROGRESSIONS = {  // chordtype, chordtrans, scaletype, scaletrans
+    "blues" : [["C", "maj", "C", "blue"],
+               ["F", "maj", "C", "blue"],
+               ["C", "maj", "C", "blue"],
+               ["C", "dom7", "C", "blue"],
+
+               ["F", "maj", "C", "blue"],
+               ["F", "maj", "C", "blue"],
+               ["C", "maj", "C", "blue"],
+               ["C", "dom7", "C", "blue"],
+
+               ["G", "maj", "C", "blue"],
+               ["F", "maj", "C", "blue"],
+               ["C", "maj", "C", "blue"],
+               ["C", "maj", "C", "blue"]],
+
+    "1564"  : [["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["A", "min", "A", "min"],
+               ["F", "maj", "F", "maj"]],
+
+    "1564L" : [["C", "maj", "C", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"],
+               ["A", "min", "A", "min"],
+               ["A", "min", "A", "min"],
+               ["F", "maj", "F", "maj"],
+               ["F", "maj", "F", "maj"]],
+
+    "6545"  : [["A", "min", "A", "min"],
+               ["G", "maj", "G", "mixo"],
+               ["F", "maj", "F", "maj"],
+               ["G", "maj", "G", "mixo"]],
+
+    "6545L" : [["A", "min", "A", "min"],
+               ["A", "min", "A", "min"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"],
+               ["F", "maj", "F", "maj"],
+               ["F", "maj", "F", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"]],
+
+    "1545"  : [["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["F", "maj", "F", "maj"],
+               ["G", "maj", "G", "mixo"]],
+
+    "1545L" : [["C", "maj", "C", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"],
+               ["F", "maj", "F", "maj"],
+               ["F", "maj", "F", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"]],
+
+    "ii7v7" : [["D", "min7", "D", "dori"],
+               ["D", "min7", "D", "dori"],
+               ["G", "dom7", "G", "mixo"],
+               ["G", "dom7", "G", "mixo"]],
+
+    "ii7v7L": [["D", "min7", "D", "dori"],
+               ["D", "min7", "D", "dori"],
+               ["D", "min7", "D", "dori"],
+               ["D", "min7", "D", "dori"],
+               ["G", "dom7", "G", "mixo"],
+               ["G", "dom7", "G", "mixo"],
+               ["G", "dom7", "G", "mixo"],
+               ["G", "dom7", "G", "mixo"]],
+
+    "Pach"  : [["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["A", "min", "A", "min"],
+               ["E", "min", "E", "min"],
+               ["F", "maj", "F", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["D", "min", "D", "dori"],
+               ["G", "dom7", "G", "mixo"]],
+
+    "PachL" : [["C", "maj", "C", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["G", "maj", "G", "mixo"],
+               ["G", "maj", "G", "mixo"],
+               ["A", "min", "A", "min"],
+               ["A", "min", "A", "min"],
+               ["E", "min", "E", "min"],
+               ["E", "min", "E", "min"],
+               ["F", "maj", "F", "maj"],
+               ["F", "maj", "F", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["C", "maj", "C", "maj"],
+               ["D", "min", "D", "dori"],
+               ["D", "min", "D", "dori"],
+               ["G", "dom7", "G", "mixo"],
+               ["G", "dom7", "G", "mixo"]] }
+
+
+#### Layout constants
+LEFT = 5
+LABEL_W = 60        // width of labels
+LABEL_YO = 4        // label vertical offset to align with controls
+SLABEL_YO = 8       // label vertical offset for slider labels
+CTRL_H = 30
+SLIDER_W = 370  // width of sliders
+SLIDER_H = CTRL_H + 3
+TYPE_X = LEFT + LABEL_W
+TYPE_W = 80
+TRANS_X = TYPE_X + TYPE_W + 5
+TRANS_W = 55
+TEXT_X = TRANS_X + TRANS_W + 5
+TEXT_W = 80
+EXTRA_X = LEFT + SLIDER_W + 20
+EXTRA_W = 70
+BUTTON_H = CTRL_H
+BUTTON_YO = 7
+HARM_X = STAGE_WIDTH + 10
+HARM_Y = 5
+HARM_W = 90
+HARM_H = 400
+
+def transpose(set, trans)
+    if not set
+        display "*** ERROR in transpose", set, trans
+        set = "101011010101"
+    var tr = INT_FROM_TRANS.get(trans)
+    if not tr
+        display "*** ERROR in transpose", tr, trans
+        tr = 0
+    return transpose_int(set, tr)
+
+
+def transpose_int(set, tr)
+    var left = subseq(set, 12 - tr)
+    var right = subseq(set, 0, 12 - tr)
+    return left + right
+
+
+class Conductor_panel:
+    var x, y, w, h;
+    var spc_btw_item;
+    var loc; // Location of Items on the panel
+    var lab;
+    var scaletype_ch, scaletrans_ch
+    var chordtype_ch, chordtrans_ch
+    var basstrans_ch
+    var sty_ch;
+    var scale_text, chord_text, bass_text, sty_text;
+    var slider_latency
+    var commit
+    var metro
+    
+    def init(win, x_, y_, w_, h_):
+        x = x_ // x is ignored
+        y = y_
+        w = w_
+        h = h_
+        loc = {}
+        userlist = []
+        lab = ["M", "S", "USERS"]
+        cho_width = 80
+        cho_height = 30
+
+        ry = y // row y value
+
+        set_harm = Radiobox(win, "Harmony", STYLES,
+                            HARM_X, HARM_Y, HARM_W, HARM_H)
+
+        slider_latency = Fancy_slider(win, "Latency", LEFT, ry + SLABEL_YO,
+                                      SLIDER_W, SLIDER_H, LABEL_W, 
+                                      -100, 100, 0, 'integer')
+
+        ry = ry + SLIDER_H
+        slider_bpm = Fancy_slider(win, "BPM", LEFT, ry + SLABEL_YO,
+                                  SLIDER_W, SLIDER_H, LABEL_W, 
+                                  0, 300, 60, 'integer')
+
+
+        ry = ry + SLIDER_H
+        slider_beat = Fancy_slider(win, "Beats", LEFT, ry + SLABEL_YO,
+                                   SLIDER_W, SLIDER_H, LABEL_W, 
+                                   2, 6, 4, 'integer')
+
+
+        ry = ry + SLIDER_H + 10
+        Statictext(win, "Scale", LEFT, ry + LABEL_YO, LABEL_W, BUTTON_H)
+        scaletype_ch = Choice(win, TYPE_X, ry, TYPE_W, CTRL_H)
+        scaletrans_ch = Choice(win, TRANS_X, ry, TRANS_W, CTRL_H)
+        scale_text = Textctrl(win, "", TEXT_X, ry, TEXT_W, CTRL_H)
+
+ 
+         // Chords
+        ry = ry + CTRL_H
+        Statictext(win, "Chord", LEFT, ry + LABEL_YO, LABEL_W, BUTTON_H)
+        chordtype_ch = Choice(win, TYPE_X, ry, TYPE_W, CTRL_H)
+        chordtrans_ch = Choice(win, TRANS_X, ry, TRANS_W, CTRL_H)
+        chord_text = Textctrl(win, "", TEXT_X, ry, TEXT_W, CTRL_H)
+
+        // BASS
+        ry = ry + CTRL_H
+        Statictext(win, "Bass", LEFT, ry + LABEL_YO, LABEL_W, BUTTON_H)
+        bass_ch = Choice(win, TYPE_X, ry, TYPE_W, CTRL_H)
+        bass_text = Textctrl(win, "", TEXT_X, ry, TEXT_W, CTRL_H)
+       
+        //STYLE
+        ry = ry + CTRL_H
+        Statictext(win, "Style", LEFT, ry + LABEL_YO, LABEL_W, BUTTON_H)
+        sty_ch = Choice(win, TYPE_X, ry, TYPE_W, CTRL_H)
+        sty_text = Textctrl(win, "", TEXT_X, ry, TEXT_W, CTRL_H)
+
+        ry = ry + CTRL_H + 5
+        commit = Button(win, "COMMIT", LEFT, ry + BUTTON_YO, 80, BUTTON_H)
+        commit.target = this
+        commit.method = 'commit_handler'
+
+        metro = Checkbox(win, "METRO", LEFT + 100, ry + BUTTON_YO, 
+                         80, BUTTON_H)
+        metro.target = this
+        metro.method = 'metro_handler'
+        
+        player_list = List_people(win, STAGE_WIDTH + HARM_W + 15, 5, 200)
+
+        // 0 ---> scale
+        // 1 ---> chord
+        // 2 ---> bass
+        // 3 ---> style
+        for ch in SCALETYPE_CHOICES: scaletype_ch.append(ch)
+        for ch in TRANS_CHOICES: scaletrans_ch.append(ch)
+        for ch in CHORDTYPE_CHOICES: chordtype_ch.append(ch)
+        for ch in TRANS_CHOICES: chordtrans_ch.append(ch)
+        for ch in TRANS_CHOICES: bass_ch.append(ch)
+        for ch in STYLE_CHOICES: sty_ch.append(ch)
+        
+        choice_init()
+        //set methods and targets
+        scaletype_ch.target = this
+        scaletrans_ch.target = this
+        chordtype_ch.target = this
+        chordtrans_ch.target = this
+        bass_ch.target = this
+        sty_ch.target = this
+        #------------------------------
+        scaletype_ch.method = 'scaletype_choice_handler'
+        scaletrans_ch.method = 'scaletrans_choice_handler'
+        chordtype_ch.method = 'chord_choice_handler'
+        chordtrans_ch.method = 'chord_choice_handler'
+        bass_ch.method = 'bass_choice_handler'
+        sty_ch.method = 'sty_choice_handler'
+        #-----------------------------
+        scale_text.target = this
+        chord_text.target = this
+        bass_text.target = this
+        sty_text.target = this
+        #--------------------------------
+        scale_text.method = 'scale_text_handler'
+        chord_text.method = 'chord_text_handler'
+        bass_text.method = 'bass_text_handler'
+        sty_text.method = 'sty_text_handler'
+        
+
+    // called when COMMIT button is pressed, sends
+    // harmony, style, and play/stop messages to performers
+    def commit_handler(rest ignore)
+        var has_solo
+        for item in player_list.items
+            if item[SOLO]: has_solo = t
+        for item in player_list.items
+            var play_flag = item[SOLO] or ((not has_solo) and (not item[MUTE]))
+            pending_cstate.play[item[NAME]] = play_flag
+
+        // send tempo and meter if they have changed
+        pending_cstate.bpm = slider_bpm.value()
+        pending_cstate.beats_per_measure = slider_beat.value()
+
+        // set harmony
+        display "set harmony", scaletype_ch.value()
+        var set = SCALETYPE_FROM_CHOICE.get(scaletype_ch.value())
+        pending_cstate.scale = transpose(set, scaletrans_ch.value())
+        set = CHORDTYPE_FROM_CHOICE.get(chordtype_ch.value())
+        pending_cstate.chord = transpose(set, chordtrans_ch.value())
+
+        if not pending_cstate.chord:
+            display "*** ERROR: bad chord", chord_ch.value()
+            pending_cstate.chord = "100010010000"
+        pending_cstate.bass = INT_FROM_TRANS.get(bass_ch.value())
+        if not pending_cstate.bass:
+            display "*** ERROR: bad bass", bass_ch.value()
+            pending_cstate.bass = 0
+        pending_cstate.prog = CHORD_PROGRESSIONS.get(STYLES[set_harm.value()])
+        // if not pending_cstate.prog, it's no problem: it means "manual"
+        // send the style messages
+        pending_cstate.style = intern(sty_ch.value())
+
+                                        
+    def metro_handler(obj, event, x, y)
+        stage.style = 'sync' if x else nil
+        cur_start_beat = 0 // we have to set this somewhere to get anything to play
+
+
+    def update_scale_text()
+        scale_text.set_string(scaletrans_ch.value() + " " + scaletype_ch.value())
+
+    def scaletype_choice_handler(obj, event, x, y):
+        display "scaletype_choice_handler", obj, event, x, y
+        update_scale_text()
+
+    def scaletrans_choice_handler(obj, event, x, y):
+        display "scaletrans_choice_handler", obj, event, x, y
+        update_scale_text()
+
+    // this handles text type-in for both scales and chords
+    def parse_trans_type(text, trans_ch, type_ch)
+        var trans
+        if len(text) < 4
+            return // must be invalid
+        if trans[1] != "#" and (trans[1] != "b" or 
+                                subseq(trans, 1) == "blues")
+            trans = text[0]
+            text = subseq(text, 1)
+        else
+            trans = subseq(text, 0, 2)
+            text = subseq(text, 2)
+        trans_ch.set_value(trans)
+        type_ch.set_value(text) // what's left over is the type
+
+
+    def scale_text_handler(obj, event, x, y):
+        if event  == WXS_TEXT_ENTER:
+            parse_trans_type(obj.value(), scaletrans_ch, scaletype_ch)
+
+    // chord
+    def update_chord_text()
+        chord_text.set_string(chordtrans_ch.value() + " " + chordtype_ch.value())
+
+    def chord_choice_handler(obj, event, x, y)
+        display "chord_choice_handler", obj, event, x, y
+        var chordtype = chordtype_ch.value()
+        var chordtrans = chordtrans_ch.value()
+        update_chord_text()
+        var scaletype = CHORDTYPE_TO_SCALETYPE.get(chordtype)
+        if not scaletype
+            display "*** ERROR: bad chordtype?", chordtype, scaletype
+            scaletype = "maj"
+        scaletype_ch.set_value(scaletype)
+        scaletrans_ch.set_value(chordtrans)
+        update_scale_text()
+        bass_ch.set_and_act(chordtrans)
+
+    def chord_text_handler(obj, event, x, y):
+        if event  == WXS_TEXT_ENTER:
+            parse_trans_type(obj.value(), chordtrans_ch, chordtype_ch)
+
+    // bass
+    def bass_choice_handler(obj, event, x, y):
+        bass_text.set_string(obj.value())
+    
+    def bass_text_handler(obj, event, x, y):
+        if event == WXS_TEXT_ENTER:
+            bass_ch.set_value(obj.value())
+
+    // Style
+    def sty_choice_handler(obj, event, x, y):
+        sty_text.set_string(obj.value())
+    
+    def sty_text_handler(obj, event, x, y):
+        if event == WXS_TEXT_ENTER:
+            sty_ch.set_value(obj.value())
+            
+    def get_scale_value(): scale_ch.value()
+
+    def get_chord_value():chord_ch.value()
+
+    def get_base_value():bass_ch.value()
+
+    def get_style_value():sty_ch.value()
+    
+    def add_latency(handler):
+        slider_latency.method = handler
+        
+    def choice_init():
+        scaletype_ch.set_value(SCALETYPE_CHOICES[0])
+        scaletrans_ch.set_value(TRANS_CHOICES[0])
+        chordtype_ch.set_value(CHORDTYPE_CHOICES[0])
+        chordtrans_ch.set_value(TRANS_CHOICES[0])
+        bass_ch.set_value(TRANS_CHOICES[0])
+        sty_ch.set_value(STYLE_CHOICES[0])

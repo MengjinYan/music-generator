@@ -1,0 +1,472 @@
+# conductor.srp -- Laptop Orchestra 2017 server
+#
+# Roger Dannenberg
+# Feb 27, 2017
+
+# run this with wxserpent64
+
+# Overview:
+#    In general, state is set up on the GUI and the COMMIT button is pressed.
+# The state them becomes pending. Meanwhile, every measure, we check if the 
+# current state has "expired" (simple state changes expire every measure;
+# chord progressions may run for awhile). If the current state expired, we
+# adopt the pending state. Messages are sent to enact any changes between
+# the expired state and the pending state. Note that pending state may
+# simply repeat over and over if nothing new replaces it.
+#
+# State: consists of the following:
+#    play: a boolean for each player based on solo and mute buttons
+#    bpm: beats per minute (integer)
+#    beats_per_measure: meter (integer)
+#    scale: notes in the scale, e.g. "101011010101" (string)
+#    chord: notes in the chord, e.g. "100010010000" (string)
+#    bass: integer from 0 to 11 - the root or bass note for harmony
+#    style: a symbol
+#    prog: a chord progression, array of chord names (strings)
+#          if prog is nil, use scale/chord/bass instead
+#          if prog is not nil, tranpose it by bass
+
+require "stage" // lots of shared code here with players
+require "conductor_panel"
+require "chat"
+
+class Cstate
+    var play
+    var bpm
+    var beats_per_measure
+    var base_beat_number
+    var scale
+    var chord
+    var bass
+    var style
+    var prog
+
+    def init()
+        play = {}
+        bpm = 60
+        beats_per_measure = 4
+        base_beat_number = 0
+        scale = "101011010101"
+        chord = "100010010000"
+        bass = 0
+        style = 'sync'
+        prog = nil
+
+pending_cstate = Cstate()
+current_cstate = Cstate()
+
+# This is the O2 application name. Only O2 processes with the same
+# application name and same local area network can communicate, so
+# we make the application name easy to change.
+APPLICATION = "cmsip"
+PITCH = 60
+SERVICE = "cond"
+
+TIMEOUT = 5 // how long with no alive message before dead
+
+def prune_players() // remove dead players from lists
+    var now = o2_time_get()
+    performers["cond"].alive = now // protect conductor from timeout
+    for name in performers.keys()
+        var perf = performers[name]
+        if perf.alive + TIMEOUT < now
+            display "death", name, now
+            performers.remove(name)
+            player_list.remove_name(name)
+    rtsched.cause(10, nil, 'prune_players')
+
+
+def conductor_init()
+    initialize_midi("conductor")
+    stage = Stage(0, 5, 5, STAGE_WIDTH, idiv(STAGE_WIDTH, 2), "cond")
+    performers = { "cond": stage.perf }
+
+    conductor_panel = Conductor_panel(0, 0, STAGE_BOTTOM, 700, 700)
+
+    chat = Chat(0, 5, 485, STAGE_WIDTH, 260)
+    conductor_panel.add_latency('latency_handler') // defined in stage.srp
+//    latency = Labeled_slider(0, "Latency", 5, STAGE_BOTTOM + 5, 300, 20, 60,
+//                             -100, 100, 0, 'integer')
+//    tempo = Labeled_slider(0, "BPM", 5, STAGE_BOTTOM + 30, 300, 20, 60,
+//                           50, 250, 100, 'exponential')
+//    timesig = Labeled_slider(0, "TimeSig", 5, STAGE_BOTTOM + 55, 300, 20, 60,
+//                             2, 8, 4, 'integer')
+//    tempo_set = Button(0, "Set Tempo", 310, STAGE_BOTTOM + 42, 100, 20)
+//    tempo_set.method = 'tempo_set_handler'
+//
+
+//    ####### TEST BUTTONS TO BE REMOVED ############
+//    sync = Button(0, "Sync", 5, STAGE_BOTTOM + 80, 50, 20)
+//    sync.method = 'sync_style_handler'
+//    rock = Button(0, "Rock", 65, STAGE_BOTTOM + 80, 50, 20)
+//    rock.method = 'rock_style_handler'
+//    keysl = Labeled_slider(0, "Key", 5, STAGE_BOTTOM + 105, 300, 20, 60,
+//                             0, 11, 0, 'integer')
+//    keysl.method = 'key_handler'
+
+
+    o2_initialize(APPLICATION, false)
+    o2_service_new("cond")
+    // o2_debug_flags("O")
+    o2_clock_set()
+
+    o2_method_new("/cond/join", "s", 'join_handler', true)
+    o2_method_new("/cond/alive", "s", 'alive_handler', true)
+    o2_method_new("/cond/posn", "sff", 'posn_handler', true)
+    o2_method_new("/cond/chat", "ss", 'chat_handler', true)
+    poll_function = 'o2_poll_fn'
+    sched_time_get = 'o2_time_get'
+    sched_init()
+    vtsched.cause(1.0, stage, 'beat_update')
+    rtsched.cause(10.0, nil, 'prune_players')
+    sched_launch(2)
+    // this will force repainting, so do it at the end after
+    // everything is initialized to avoid problems
+    default_window.set_width(STAGE_WIDTH + HARM_W + 220)
+    default_window.set_height(750)
+    default_window.set_position(10, 25)
+
+
+def beat_phase_get(beat)
+    (beat - current_cstate.base_beat_number) %
+    current_cstate.beats_per_measure
+    stage.timesig = current_cstate.beats_per_measure
+
+# this replaces measure_downbeat in stage.srp
+def measure_downbeat()
+    // this is where we look for changes made by the COMMIT button
+    // and if any, we send them out to players. The changes are to
+    // take effect at the next downbeat, which is passed as a parameter
+    //     We make changes NO MORE THAN one measure ahead, so that's
+    // why we're doing this on the downbeat, but if the tempo is 
+    // slow enough, we'd like to wait until 1s before the downbeat.
+    // Therefore, we schedule the call to check_for_state_changes():
+    var beat = round(vtsched.time) // must be an integer
+    var commit_beat = beat + current_cstate.beats_per_measure
+    var check_vtime = vtsched.r2v(vtsched.v2r(commit_beat) - 1.0)
+    if check_vtime > beat:
+        vtsched.cause(absolute(check_vtime), nil, 
+                      'check_for_state_changes', commit_beat)
+    else
+        check_for_state_changes(commit_beat)
+
+
+def check_for_state_changes(commit_beat)
+    display "check_for_state_changes"
+    // send stop/start messages
+    for name in pending_cstate.play.keys()
+        var p = pending_cstate.play[name]
+        display "check_for_state_changes pending play", p
+        if p != current_cstate.play.get(name)
+            if p
+                display "check_for_state_changes send_start_play_to", name, commit_beat
+                send_start_play_to(name, commit_beat)
+            else
+                display "check_for_state_changes send_stop_play_to", name, commit_beat
+                send_stop_play_to(name, commit_beat)
+            current_cstate.play[name] = p
+
+    // send tempo messages
+    if pending_cstate.beats_per_measure != current_cstate.beats_per_measure or
+       pending_cstate.bpm != current_cstate.bpm
+        current_cstate.beats_per_measure = pending_cstate.beats_per_measure
+        current_cstate.bpm = pending_cstate.bpm
+        set_tempo(current_cstate.beats_per_measure, 
+                  current_cstate.bpm, commit_beat)
+
+    // if we've ended a chord progression and pending has one, OR we can start
+    // a chord progression, copy it
+    var end_of_prog = (current_cstate.prog and len(current_cstate.prog) == 0)
+    display "prog", end_of_prog, current_cstate.prog, pending_cstate.prog
+    if (end_of_prog or not current_cstate.prog) and pending_cstate.prog
+        current_cstate.prog = pending_cstate.prog.copy()
+        current_cstate.bass = pending_cstate.bass
+    elif end_of_prog // go back to manual chord selection
+        current_cstate.prog = nil
+
+    if current_cstate.prog // sequence through a chord progression
+        // progression elements are of the form
+        //   [chordtrans, chordtype, scaletrans, scaletype], e.g. 
+        //   ["C",        "maj",     "C",        "blue" ]
+        var harm = current_cstate.prog[0] // get the harmony info
+        current_cstate.prog.uninsert(0) // remove first element from list
+        // convert to "100010010000" form:
+        var chord = transpose(CHORDTYPE_FROM_CHOICE.get(harm[1]), harm[0])
+        var scale = transpose(SCALETYPE_FROM_CHOICE.get(harm[3]), harm[2])
+        display "using chord progression", harm, current_cstate.prog, chord, scale
+
+        // transpose by bass
+        current_cstate.chord = transpose_int(chord, current_cstate.bass)
+        current_cstate.scale = transpose_int(scale, current_cstate.bass)
+        // derive bass from chord + bass; we are in "chord progression mode"
+        // where the root is given by the chord progression (harm[0]) but 
+        // this is transposed by current_cstate.bass:
+        send_harmony_to_all(commit_beat, 
+                            (INT_FROM_TRANS.get(harm[0], 0) + 
+                             current_cstate.bass) % 12)
+
+    // use "manual" control of scale, chord, and bass note
+    elif pending_cstate.scale != current_cstate.scale or 
+         pending_cstate.chord != current_cstate.chord or 
+         pending_cstate.bass != current_cstate.bass
+        display "sending harmony to all with manual info", pending_cstate.scale, pending_cstate.chord, pending_cstate.bass
+        current_cstate.scale = pending_cstate.scale
+        current_cstate.chord = pending_cstate.chord
+        current_cstate.bass = pending_cstate.bass
+        send_harmony_to_all(commit_beat, current_cstate.bass)
+    else
+        print "neither chord progression nor new state"
+        
+    display "downbeat", pending_cstate.style, current_cstate.style
+    if pending_cstate.style != current_cstate.style
+        current_cstate.style = pending_cstate.style
+        stage.style = pending_cstate.style
+        send_style_to_all(commit_beat)
+
+
+
+##############################################
+def set_stage_position()
+    send_position_to_all(stage.perf)
+
+
+############ tempo control #############
+
+# get the next downbeat that is at least 2s in the future
+def safely_in_the_future()
+    vtsched.start_use()
+    var beat = int(vtsched.time + 1)
+    while (beat - current_cstate.base_beat_number) % current_cstate.beats_per_measure != 0
+        beat = beat + 1
+    var when = vtsched.v2r(beat)
+    while when - rtsched.time < 2
+        beat = beat + current_cstate.beats_per_measure
+        when = vtsched.v2r(beat)
+    vtsched.finish_use()
+    return beat
+
+
+# message to send is /service/timemap timestamp beat-per-meas bps beat-num
+#  (type string: "didi") 
+#
+# we want to send timemap message "well in advance" to take place at the
+# timestamp. Interpret "well in advance" as 2s, and change only on measure
+# boundaries.
+#
+
+def set_tempo(beats_per_measure, bpm, change_beat)
+    if tempo_change_pending
+        return // cannot set up tempo change if one is already pending
+    var beats_per_second = bpm / 60
+    vtsched.start_use()
+    display "calling send_timemap_to_all", beats_per_measure
+    display "    ", beats_per_second, change_beat
+
+    send_timemap_to_all(vtsched.v2r(change_beat), // base_beat_time
+                        beats_per_measure, beats_per_second, change_beat)
+    vtsched.finish_use()
+    tempo_change_pending = true
+
+
+def timesig_change(bpmeas, base)
+    stage.timesig = bpmeas
+    stage.base_beat_number = base
+
+
+// called on vtsched
+def tempo_change(rt, bps, beat)
+    if not within(rtsched.time, rt, 0.001)
+        display "WARNING: tempo_change anomaly", rtsched.time, rt
+        // maybe we should set the rtime here
+    if not within(vtsched.time, beat, 0.001)
+        display "WARNING: tempo_change anomaly", vtsched.time, beat
+        // maybe we should set the vtime here
+    vtsched.set_bps(bps)
+    current_cstate.base_beat_number = beat
+    tempo_change_pending = false
+
+
+
+############ outgoing messages ##############
+
+def send_position_to_all(p)
+    for name in performers.keys()
+        if p.name != name and name != "cond"
+            o2_send_start()
+            o2_add_string(p.name)
+            o2_add_float(p.x)
+            o2_add_float(p.y)
+            o2_send_finish(0.0, "!" + name + "/posn", TCP)
+
+
+def send_all_positions_to_perf(perf_name)
+    for name in performers.keys()
+        var p = performers[name]
+        if perf_name != name and p.x and p.y
+            o2_send_start()
+            o2_add_string(name)
+            o2_add_float(p.x)
+            o2_add_float(p.y)
+            o2_send_finish(0.0, "!" + perf_name + "/posn", TCP)
+            
+
+def send_timemap_to(name, base_beat_time, beats_per_measure, bps, 
+                    base_beat_number)
+    var address = "!" + name + "/timemap"
+    o2_send_start()
+    o2_add_double(base_beat_time)
+    o2_add_int32(beats_per_measure)
+    o2_add_double(bps)
+    o2_add_int32(base_beat_number)
+    o2_send_finish(0.0, address, TCP)
+
+
+def send_timemap_to_all(base_beat_time, beats_per_measure, bps, 
+                        base_beat_number)
+    for name in performers.keys()
+        var p = performers[name]
+        if name != "cond"
+            send_timemap_to(name, base_beat_time, beats_per_measure, bps,
+                            base_beat_number)
+    // also send update to ourself, the conductor
+    if beats_per_measure != stage.timesig
+        vtsched.cause(absolute(base_beat_number - 0.01), nil, 
+                      'timesig_change', beats_per_measure, 
+                      base_beat_number)
+    vtsched.cause(absolute(base_beat_number), nil, 'tempo_change', 
+                  base_beat_time, bps, base_beat_number)
+
+
+
+def send_harmony_to(name, beat, optional bass)
+    var address = "!" + name + "/harmony"
+    o2_send_start()
+    o2_add_int32(beat)
+    o2_add_string(current_cstate.scale)
+    o2_add_string(current_cstate.chord)
+    o2_add_int32(bass if bass else current_cstate.bass)
+    o2_send_finish(0.0, address, TCP)
+
+
+def send_harmony_to_all(beat, bass)
+    for name in performers.keys()
+        var p = performers[name]
+        if name != "cond"
+            send_harmony_to(name, beat, bass)
+
+
+def send_style_to(name, beat)
+    display "send_style_to", beat, str(current_cstate.style)
+    var address = "!" + name + "/style"
+    o2_send_start()
+    o2_add_int32(beat)
+    o2_add_string(str(current_cstate.style))
+    o2_send_finish(0.0, address, TCP)
+    
+
+def send_style_to_all(beat)
+    for name in performers.keys()
+        var p = performers[name]
+        if name != "cond"
+            send_style_to(name, beat)
+
+
+def send_start_play_to(name, beat)
+    var address = "!" + name + "/start"
+    o2_send_start()
+    o2_add_int32(beat)
+    o2_send_finish(0.0, address, TCP)
+    
+
+def send_start_play_to_all(beat)
+    for name in performers.keys()
+        var p = performers[name]
+        if name != "cond"
+            send_start_play_to(name, beat)
+    cur_start_beat = beat
+
+def send_stop_play_to(name, beat)
+    var address = "!" + name + "/stop"
+    o2_send_start()
+    o2_add_int32(beat)
+    o2_send_finish(0.0, address, TCP)
+    
+def send_stop_play_to_all(beat)
+    for name in performers.keys()
+        var p = performers[name]
+        if name != "cond"
+            send_stop_play_to(name, beat)
+    cur_stop_beat = beat
+
+######CHAT PROTOCOL####
+def send_private_message(receiver, msg):
+    //Send messages to a particular receiver
+    msg_sent_to = [SERVICE, receiver]
+    if SERVICE == receiver:
+        msg_sent_to.unappend()
+    for info in msg_sent_to:
+        var address = "!" + info + "/chat"
+        o2_send_start()
+        o2_add_string(SERVICE)
+        o2_add_string(msg)
+        o2_send_finish(0.0, address, TCP)
+
+def send_message(msg):
+    //send o2 message to everyone
+    if msg != false:
+        for name in performers.keys():
+            var address = "!" + name + "/chat"
+            o2_send_start()
+            o2_add_string(SERVICE)
+            o2_add_string(msg)
+            o2_send_finish(0.0, address, TCP)
+
+
+############ incoming messages ##############
+
+def join_handler(timestamp, address, types, name):
+    display "join_handler", address, name
+    // first, make sure name does not exist
+    player_list.remove_name(name)
+    performers.remove(name)
+    pending_cstate.play[name] = false
+    // now introduce name to the system
+    send_all_positions_to_perf(name)
+    var beat = safely_in_the_future()
+    send_timemap_to(name, vtsched.v2r(beat), 
+                    current_cstate.beats_per_measure, vtsched.bps, beat)
+    send_harmony_to(name, beat)
+    send_style_to(name, beat)
+    performers[name] = Performer(name)
+    player_list.add_name(name)
+
+
+
+def alive_handler(timestamp, address, types, name):
+    display "alive_handler", name, o2_time_get()
+    var performer = performers.get(name)
+    if performer
+        performer.set_alive()
+    else
+        print "    * alive_handler name not found"
+
+def posn_handler(timestamp, address, types, name, x, y):
+    display "posn_handler", address, name, x, y
+    var p = performers.get(name)
+    if not p
+        p = Performer(name)
+        performers[name] = p
+    p.x = x       //posn_handler can ensure to change posn and add
+    p.y = y
+    send_position_to_all(p)
+    stage.refresh(t)
+
+def chat_handler(timestamp, address, types, sent_from, message):
+    chat.add_new_msg(sent_from, message)
+
+def o2_poll_fn()
+    o2_poll()
+
+
+conductor_init()
+

@@ -1,0 +1,99 @@
+# DESIGN of the GUI:
+# Things I will require for a GUI Design
+#       |-------------------|     Buttons :
+#       |                   |     1) Send (May be keep enter as send)
+#       |    multi-text     |     2) Clear all Text (If screen is cl)
+#       |                   |     Static Text:
+#       |                   |     1) Show where to type
+#       |-------------------|     2) Directions on how to use
+#       |     Textctrl      |       (Probably a button to show it?)
+#       |-------------------|
+# Inherit from Panel (preferable) :
+# ISSUES : 
+# 1) How to track from whom the message is coming from
+# K B Rahul, March 2017
+
+require "wxserpent"
+require "debug"
+
+CHAT_SPACE = 6
+CHAT_BTN_W = 80
+CHAT_BTN_H = 25
+
+class Chat (Panel):
+    var output
+    var input
+    var clear_one
+    var clear_all
+    var send
+    var locs
+
+    def init(parent, x, y, w, h):
+        super.init(parent, x, y, w, h)
+        set_color("WHEAT")
+        locs = {}
+        // multitext (output) location:
+        locs['mtext'] = [CHAT_SPACE, CHAT_SPACE, w - CHAT_BTN_W - 12, h - 75]
+        output = Multitext(id, CHAT_SPACE, CHAT_SPACE,
+                           w - CHAT_BTN_W - 12, h - 80)
+        clear_one = Button(id, "Clear One", w - CHAT_BTN_W - CHAT_SPACE,
+                           CHAT_SPACE, CHAT_BTN_W, CHAT_BTN_H)
+        clear_one.target = this
+        clear_one.method = 'clear_one_handler'
+
+        clear_all = Button(id, "Clear All", w - CHAT_BTN_W - CHAT_SPACE,
+                           CHAT_BTN_H + 2 * CHAT_SPACE,
+                           CHAT_BTN_W, CHAT_BTN_H)
+        clear_all.target = this
+        clear_all.method = 'clear_all_handler'
+        
+        Statictext(this, "Type HERE:", 0, h - 80 + CHAT_SPACE * 2,
+                   100, 25)
+        Statictext(this,
+                   "Begin your text with @name to send a private message.",
+                   14, h - 80 + CHAT_SPACE * 2 + 24, 400, 25)
+        Statictext(this, 
+                   "Begin with @cond to send only to conductor.",
+                   14, h - 80 + CHAT_SPACE * 2 + 44, 400, 25)
+
+        // input typein location:
+        input = Textctrl(id, "",  CHAT_SPACE + 85, h - 80 + CHAT_SPACE * 2,
+                         w - (CHAT_SPACE * 2 + 80), 25)
+        input.method = 'input_handler'
+        input.target = this
+
+    def input_handler(source, event, x, y):
+        if event == WXS_TEXT_ENTER:
+            var msg = source.value() + "\n"
+            if msg[0] == "@":
+                var all_users = performers.keys()
+                if not performers.has_key("cond"):
+                    all_users.append("cond")
+                for name in all_users:
+                    var findspace = find(msg, " ")
+                    var recname = tolower(subseq(msg, 1, findspace)) 
+                    if recname == tolower(name):
+                        var message = " (private) " + 
+                        subseq(msg, findspace)
+                        send_private_message(name, message)
+                source.set_string("")
+            else
+                send_message(" " + msg)
+                source.set_string("")
+
+    // drop the top message
+    def clear_one_handler(obj, event, x, y)
+        var s = output.value()
+        var newline = find(s, "\n")
+        if newline > 0:
+            s = subseq(s, newline + 1)
+            output.set_string(s)
+
+    // clear all messages
+    def clear_all_handler(obj, event, x, y)
+        output.set_string("")
+
+
+    def add_new_msg(from_user, msg):
+        var s = output.value() + from_user + ":" + msg 
+        output.set_string(s)

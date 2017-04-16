@@ -1,0 +1,262 @@
+# playerbase.srp -- test code and base for implementing laptop orchestra performers
+#
+# Roger Dannenberg
+# Feb 27, 2017
+
+require "../cond/stage" // lots of shared code here with server
+require "player_panel"
+require "../cond/chat"
+
+APPLICATION = "cmsip"
+PITCH = 64
+CONDUCTOR = "cond"
+
+current_bps = 1 // tempo currently in effect
+base_beat_time = 0 // time of the starting beat
+current_beats_per_measure = 4
+
+joined = false  // have we joined the orchestra yet?
+have_timemap = false // set when timemap is first called
+
+def heartbeat()
+    // display "heartbeat", o2_time_get(), vtsched.time, rtsched.time
+    o2_send_start()
+    o2_add_string(SERVICE)
+    o2_send_finish(0.0, "/cond/alive", TCP)
+    rtsched.cause(1.0, nil, 'heartbeat')
+
+
+def wait_for_clock_sync()
+    display "wait_for_clock_sync", time_get()
+    if o2_status(CONDUCTOR) > O2_LOCAL:
+        player_init()
+    else:
+        rtsched.cause(0.1, nil, 'wait_for_clock_sync')
+
+
+def player_has_clock_sync()
+    // conductor exists and we haave clock sync with it. Time to join
+    o2_send_start()
+    o2_add_string(SERVICE) // send our name
+    o2_send_finish(0.0, "/cond/join", TCP)
+    joined = true
+    send_stage_position()
+    rtsched.start_use()
+    // display "player_has_clock_sync", rtsched.time, o2_time_get(), absolute(o2_time_get())
+    rtsched.cause(absolute(o2_time_get()), nil, 'heartbeat')
+    rtsched.finish_use()
+
+
+def with_service(addr)
+    "!" + SERVICE + addr
+
+def main():
+    if len(command_line_arguments) > 1
+        SERVICE = command_line_arguments[1]
+        print "**** RENAMING SERVICE TO", SERVICE, "SPECIFIED ON COMMAND LINE ****"
+    sched_init()
+    sched_launch(2)
+    initialize_midi(SERVICE)
+    o2_initialize(APPLICATION, false)
+    o2_service_new(SERVICE)
+    poll_function = 'o2_poll_fn'
+    sched_time_get = 'o2_time_get'
+    stage = Stage(0, 0, 0, STAGE_WIDTH, idiv(STAGE_WIDTH, 2), SERVICE)
+    performers = { SERVICE: stage.perf }
+    player = Player_panel(0, 5, STAGE_BOTTOM + 5, 500, 700)
+    display_panel = player // see stage.srp, display_panel.flash_downbeat()
+    chat = Chat(0, 5, 485, STAGE_WIDTH, 260)
+    default_window.set_size(STAGE_WIDTH + 15, 750)
+    // position to the right of conductor (whether or not it is open)
+    default_window.set_position(STAGE_WIDTH + 420, 25)
+    rtsched.start_use()
+    rtsched.cause(0, nil, 'wait_for_clock_sync')
+    rtsched.finish_use()
+    
+
+def player_init()
+    // IMPORTANT: no handlers until clock sync; otherwise, we'll get
+    // messages before we've established vtsched, and vtsched.start_use()
+    // will fail!
+    o2_method_new(with_service("/posn"), "sff", 'posn_handler', true)
+    o2_method_new(with_service("/timemap"), "didi", 'timemap_handler', true)
+    o2_method_new(with_service("/harmony"), "issi", 'harmony_handler', true)
+    o2_method_new(with_service("/style"), "is", 'style_handler', true)
+    o2_method_new(with_service("/start"), "i", 'start_handler', true)
+    o2_method_new(with_service("/stop"), "i", 'stop_handler', true)
+    o2_method_new(with_service("/chat"), "ss", 'chat_handler', true)
+    player_has_clock_sync()
+
+
+    
+def set_stage_position()
+    send_stage_position()
+
+
+def send_stage_position()
+    var p = stage.perf
+    if p.x and p.y and joined
+        o2_send_start()
+        o2_add_string(SERVICE)
+        o2_add_float(p.x)
+        o2_add_float(p.y)
+        o2_send_finish(0.0, "/cond/posn", TCP)
+
+
+def tempo_set(base, bps, bpmeas)
+    cur_base_beat_number = base
+    cur_bps = bps
+    cur_beats_per_measure = bpmeas
+    player.update_bpm_to(round(cur_bps * 60), "now")
+    player.update_beat_to(bpmeas, "now")
+
+
+// called on vtsched
+def tempo_change(rt, bps, beat)
+    display "tempo_change", rt, bps, beat
+    if not within(rtsched.time, rt, 0.001)
+        display "WARNING: tempo_change anomaly", rtsched.time, rt
+        // maybe we should set the rtime here
+    if not within(vtsched.time, beat, 0.001)
+        display "WARNING: tempo_change anomaly", vtsched.time, beat
+        // maybe we should set the vtime here
+    vtsched.set_bps(bps)
+    stage.timesig = cur_beats_per_measure
+    stage.base_beat_number = cur_base_beat_number
+
+
+# Globals for use by composition algorithms. 
+cur_scale = [0 for i = 0 to 12] // e.g. [true, false, true, false, ...]
+cur_chord = [0 for i = 0 to 12] // similar
+cur_bass = 0 // C initially     // integer pitch class from 0 thru 11
+
+def harmony_change(scale, chord, bass)
+    display "harmony_change", scale, chord, bass
+    # set some globals for composition algorithms
+    for b at i in scale
+        cur_scale[i] = (b == "1")
+    for b at i in chord
+        cur_chord[i] = (b == "1")
+    cur_bass = bass
+    player.update_bass_to(cur_bass, "now")
+    player.update_chord_to(chord, "now")
+    player.update_scale_to(scale, "now")
+
+def style_change(style)
+    display "style_change", style
+    cur_style = style
+    stage.style = style
+    player.update_style_to(style, "now")
+
+
+############ incoming messages ##############
+
+def posn_handler(timestamp, address, types, name, x, y):
+    display "posn_handler", address, name, x, y
+    var p = performers.get(name)
+    if not p
+        p = Performer(name)
+        performers[name] = p
+    p.x = x
+    p.y = y
+    stage.refresh(t)
+
+
+def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat)
+    display "timemap_handler", address, when, bpmeas, bps, beat
+    player.update_bpm_to(round(bps * 60), "next")
+    player.update_beat_to(bpmeas, "next")
+
+    vtsched.start_use()
+    if have_timemap // then we've already started
+        vtsched.cause(absolute(beat), nil, 'tempo_change', when, bps, beat)
+        vtsched.cause(absolute(beat - 0.5), nil, 'tempo_set', beat, bps, bpmeas)
+    else // initialize vtsched and make sure we schedule something in the future
+        vtsched.set_bps(bps)
+        // current beat is base_beat + elapsed_time * bps
+        // this works even if elapsed time is negative (it might be)
+        var b = beat + (rtsched.time - when) * bps
+        vtsched.set_vtime(b)
+        // start beat_update() on a downbeat no earlier than beat
+        // (because earlier than beat, the tempo might be different),
+        // and not in the past 
+        var start = beat
+        while start < b or (start - beat) % bpmeas != 0
+            start = start + 1
+        vtsched.cause(absolute(start), stage, 'beat_update')
+        cur_base_beat_number = beat
+        stage.base_beat_number = beat
+        cur_beats_per_measure = bpmeas
+        stage.timesig = bpmeas
+        cur_bps = bps
+        have_timemap = t
+        tempo_set(beat, bps, bpmeas) // update "now" -- we're already there
+    vtsched.finish_use()
+
+
+def harmony_handler(timestamp, address, types, beat, scale, chord, bass)
+    display "harmony_handler", beat, scale, chord, bass
+    player.update_scale_to(scale, "next")
+    player.update_chord_to(chord, "next")
+    player.update_bass_to(bass, "next")
+    vtsched.start_use()
+    vtsched.cause(absolute(beat - 0.5), nil, 'harmony_change',
+                  scale, chord, bass)
+    vtsched.finish_use()
+
+
+def style_handler(timestamp, address, types, beat, style)
+    display "style_handler", beat, style
+    player.update_style_to(style, "next")
+    vtsched.start_use()
+    vtsched.cause(absolute(beat - 0.5), nil, 'style_change', intern(style))
+    vtsched.finish_use()
+
+
+def start_handler(timestamp, address, types, beat)
+    display "start_handler", beat
+    cur_start_beat = beat
+    cur_stop_beat = 999999
+    play_next.set_string("YES")
+
+
+def stop_handler(timestamp, address, types, beat)
+    display "stop_handler", beat
+    cur_stop_beat = beat
+    play_next.set_string("NO")
+
+
+def chat_handler(timestamp, address, types, sent_from, message):
+    chat.add_new_msg(sent_from, message)
+
+######CHAT PROTOCOL####
+def send_private_message(receiver, msg):
+    //Send messages to a particular receiver
+    msg_sent_to = [SERVICE, receiver]
+    if SERVICE == receiver:
+        msg_sent_to.unappend()
+    for info in msg_sent_to:
+        var address = "!" + info + "/chat"
+        o2_send_start()
+        o2_add_string(SERVICE)
+        o2_add_string(msg)
+        o2_send_finish(0.0, address, TCP)
+
+def send_message(msg):
+    //send o2 message to everyone
+    if msg != false:
+        var users = performers.keys()
+        if not performers.has_key("cond"):
+            users.append("cond")
+        for name in users:
+            var address = "!" + name + "/chat"
+            o2_send_start()
+            o2_add_string(SERVICE)
+            o2_add_string(msg)
+            o2_send_finish(0.0, address, TCP)
+
+def o2_poll_fn()
+    o2_poll()
+
+
+main()

@@ -1,0 +1,63 @@
+# playerdemo.srp - example of a bare-bones player
+#
+# Roger B. Dannenberg
+# March 2017
+
+# IMPORTANT: SERVICE must be defined before you load playerbase.srp:
+SERVICE = "demo"
+
+# Now load playerbase.srp
+require "playerbase"
+
+// some simple music generation: Here are some problems with this:
+// - not very interesting
+// - no manual control of anything
+// - does everything: bass, chord, melody, instead of one thing
+// - all piano sounds
+// - cannot handle cur_beats_per_measure properly (assumes 4)
+// - plays absurdly fast at faster tempos
+//
+def play_a_measure()
+    # compute a measure using these variables:
+    #    cur_style - a symbol representing style to play (if
+    #       this is not your style, do not play)
+    #    cur_start_beat - what beat to start on if you are stopped
+    #    cur_stop_beat - what beat to stop on if you have started (you can
+    #       stop slightly late; generally you should not start any notes 
+    #       at or after tm_stop_beat but you can play a short note on 
+    #       tm_stop_beat if it is stylistically sensible.)
+    #    cur_beats_per_measure - the current time signature as an integer
+    #    cur_bps - current beats per second (the vtsched will implement this
+    #       but reading the vtsched timemap slope is not reliable because
+    #       vtsched may be updated instantaneously after this call.
+    #    cur_scale - boolean array representing current scale
+    #    cur_chord - boolean array representing current chord
+    #    cur_bass - integer representing root of chord
+    #
+    display "play_a_measure", cur_beats_per_measure, cur_bps
+    display "    ", cur_scale, cur_chord, cur_bass
+    # Use EPSILON here because comparing floats for equality is not
+    #   reliable without very difficult analysis. So, instead of
+    #   x >= y, we write x + EPSILON > y
+    if cur_style == 'rock'
+        # play something using the root of the chord (cur_bass)
+        midi_out.note(0, 24 + cur_bass, 100, 1)
+        vtsched.cause(1, midi_out, 'note', 0, 24 + 7 + cur_bass, 100, 1)
+        vtsched.cause(2, midi_out, 'note', 0, 24 + cur_bass, 100, 1)
+        vtsched.cause(3, midi_out, 'note', 0, 24 + 7 + cur_bass, 100, 1)
+
+        # play notes from the chord
+        for i = 0 to 12
+            if cur_chord[i]
+                midi_out.note(0, 48 + i, 100, 0.5)
+        
+        # pick a random note every 1/16 note (fast). If it's in the
+        # scale then play it, otherwise rest. Start on 2nd beat because
+        # we play the chord on downbeat and it might be nice to keep
+        # chord and "melody" separate so we can hear them clearly in
+        # this demo.
+        for i = 0 to 12 // only 3 beats
+            var pitch = 60 + int(random() * 12)
+            if cur_scale[pitch % 12]
+                vtsched.cause(1 + i * 0.25, midi_out, 'note',
+                              0, pitch, 100, 0.3)

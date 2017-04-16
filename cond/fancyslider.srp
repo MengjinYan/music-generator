@@ -1,0 +1,92 @@
+# fancyslider.srp -- implementation of labeled sliders with
+#     increment/decrement buttons
+
+# K B Rahul, updated March 2017
+
+# Update logic: There are 2 major updates in this file:
+#     - Button for increase and decrease of value by delta
+#     - value_inc and value_dec functions handle the changes made.
+
+# FIXME: delta should depend on the mapping function.
+
+
+require "utils" // for interpolate()
+require "wxserpent"
+require "slider"
+
+FS_BUTTON_WIDTH = 24
+
+
+class Fancy_slider (Labeled_slider)
+    var delta // if 'exponential' mapping, delta is a factor
+    var button_dec
+    var button_inc
+
+    def init(win, lab, x_, y_, w_, h_, labelwidth_, min, max, 
+             default, map, optional delta_ = 1) 
+        super.init(win, lab, x_, y_, w_, h_, labelwidth_, min, max, default, map)
+        delta = delta_
+        button_dec = Button(win, "-", x + labelwidth,
+                            y, FS_BUTTON_WIDTH, h)
+        button_inc = Button(win, "+", x + w - LS_NUMBER_WIDTH -
+                            FS_BUTTON_WIDTH - 5, y, FS_BUTTON_WIDTH, h)
+        button_inc.target = this
+        button_dec.target = this
+        button_inc.method = 'value_inc'
+        button_dec.method = 'value_dec'
+        
+        slider.set_position(x + labelwidth + FS_BUTTON_WIDTH, y_)
+        slider.set_width(w - labelwidth - LS_NUMBER_WIDTH - 
+                         2 * FS_BUTTON_WIDTH - 5)
+
+    def set_position(x, y)
+        label.set_position(x, y)
+        button_dec.set_position(x + labelwidth, y)
+        slider.set_position(x + labelwidth + FS_BUTTON_WIDTH, y)
+        button_inc.set_position(x + w - LS_NUMBER_WIDTH - FS_BUTTON_WIDTH, y)
+        number.set_position(x + w - LS_NUMBER_WIDTH, y)
+
+    def value_dec(source, event, x, y):
+        if event == WXS_BUTTON_CLICKED:
+            var value = val - delta
+            if mapping == 'exponential'
+                value = val / (delta if (delta != 0 and delta != 1) else 1.1)
+//            if mapping == 'linear' or mapping == 'integer':
+//                //display "mapping is linear"
+//                value = interpolate(0, min_svalue, 1000, 
+//                                    max_svalue, slider.value() - 
+//                                    delta * 10)
+//                if mapping == 'integer':
+//                    value = round(value) - 1
+//            elif mapping == 'db':
+//                value = slider_to_db(slider.value() - delta * 10, 
+//                                     maxv)
+//            elif mapping == 'exponential':
+//                value = exp(interpolate(0, min_svalue, 1000, 
+//                                        max_svalue, slider.value() -
+//                                        delta * 10))
+            if value >= minv and value <= maxv:
+                set_value(value)
+
+    def value_inc(source, event, x, y):
+        if event == WXS_BUTTON_CLICKED:
+            var value = val + delta
+            if mapping == 'exponential'
+                value = val * (delta if (delta != 0 and delta != 1) else 1.1)
+
+//            if mapping == 'linear' or mapping == 'integer':
+//                //display "mapping is linear"
+//                value = interpolate(0, min_svalue, 1000, 
+//                                    max_svalue, slider.value() + 
+//                                    delta * 10)
+//                if mapping == 'integer':
+//                    value = round(value) + 1
+//            elif mapping == 'db':
+//                value = slider_to_db(slider.value() + delta * 10, 
+//                                     maxv)
+//            elif mapping == 'exponential':
+//                value = exp(interpolate(0, min_svalue, 1000, 
+//                                        max_svalue, slider.value() +
+//                                        delta * 10))
+            if value >= minv and value <= maxv:
+                set_value(value)

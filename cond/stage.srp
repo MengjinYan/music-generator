@@ -1,0 +1,141 @@
+# stage.srp - draws the "stage" in the main window
+#
+# Roger Dannenberg
+# Feb 2017
+
+require "debug"
+require "wxserpent"
+require "sched"
+require "prefs"
+require "midi-io"
+require "mididevice"
+
+TCP = true // used in o2_send_finish()
+UDP = false
+STAGE_WIDTH = 400
+STAGE_BOTTOM = 205 // y coordinate of bottom of stage;
+// this global is set for convenience so you can position 
+// other elements in the window area below the stage
+
+# TEMPO AND BEAT INFORMATION
+
+# in addition to future plans, we need to know what's happening "now" 
+# in order to generate displays and music. Here's all the state. Generally,
+# the state changes slightly ahead of each measure downbeat.
+cur_start_beat = 999999 // default is not to play until told to
+cur_stop_beat = 999999 // a very big number
+tempo_change_pending = false // set while tempo change is scheduled
+
+
+class Performer
+    var name
+    var alive
+    var x  // nil means no location yet
+    var y
+
+    def init(name_)
+        name = name_
+        set_alive()
+
+    def set_alive()
+        alive = o2_time_get()
+
+
+def measure_downbeat(): nil  // replace this in conductor
+def play_a_measure(): nil    // replace this in player
+display_panel = nil          // set by player only to flash downbeat
+
+class Stage (Canvas)
+    var perf
+    var beat     // what is the beat number? (0 to timesig-1)
+    var timesig  // how many beats per measure?
+    var base_beat_number // downbeat where timesig started
+    var style    // the current style (controls metronome)
+
+    def init(win, x, y, w, h, myname)
+        super.init(win, x, y, w, h)
+        beat = 0
+        timesig = 4
+        base_beat_number = 0
+        perf = Performer(myname)
+        method = 'canvas_handler'
+        target = this
+        STAGE_BOTTOM = y + h // global to aid with layout
+
+
+    def paint(repaint_all)
+        var w = get_width()
+        var h = get_height()
+        for name in performers.keys()
+            var p = performers[name]
+            if p.x and p.y
+                var x = p.x * w
+                var y = p.y * h
+                draw_text(x, y, p.name)
+        // draw a circle near the top to represent the beat
+        set_brush_color("BLUE")
+        set_pen_color("BLUE")
+        draw_ellipse(10 + (beat / timesig) * (get_width() - 40),
+                     1, 20, 20) 
+
+
+    def canvas_handler(obj, event, x_, y_)
+        // display "canvas_handler", event, WXS_LEFT_UP
+        if event == WXS_LEFT_UP
+            // record our position
+            perf.x = x_ / get_width()
+            perf.y = y_ / get_height()
+            set_stage_position()
+            refresh(t)
+
+
+    // this drives the "metronome" beat indicator on the stage canvas
+    // it updates every beat, but the application needs to call this
+    // once to get it started
+    def beat_update()
+        var bnow = round(vtsched.time)
+        beat = (bnow - stage.base_beat_number) % stage.timesig
+
+        if beat == 0
+            measure_downbeat() // does per-measure processing in conductor only
+
+        metronome()
+    
+        stage.refresh(t)
+        vtsched.cause(1, this, 'beat_update')
+
+    def metronome()
+        var pitch = PITCH
+        if beat == 0
+            pitch = pitch + 2
+        
+            if vtsched.time + EPSILON > cur_start_beat and 
+               vtsched.time + EPSILON < cur_stop_beat
+                if play_now // conductor does not have a play_now Statictext
+                    play_now.set_string("YES")
+                if style != 'sync' and player_enabled
+                    play_a_measure() // implemented in player only
+                    if display_panel
+                        display_panel.flash_downbeat()
+            elif play_now
+                play_now.set_string("NO")
+        if style == 'sync' and vtsched.time + EPSILON > cur_start_beat and
+           vtsched.time < cur_stop_beat - EPSILON
+            // display "midi_out.note (metronome)", vtsched.time, pitch
+            midi_out.note(0, pitch, 100, 0.9)
+            if display_panel
+                display_panel.flash_downbeat()
+
+
+player_enabled = true     // manual override allows players to mute
+play_now = nil
+
+def latency_handler(obj, x)
+    // x is latency
+    midi_out.set_latency(x)
+
+
+def initialize_midi(appname)
+    prefs = Prefs(appname)
+    midi_devices = Midi_devices(prefs, open_later = true)
+    midi_devices.open_midi(device = 'midi_out_device', latency = LATENCY)

@@ -1,0 +1,161 @@
+# player_panel.srp -- controls and interface for playerbase.srp
+#
+# By K B Rahul, March 2017
+
+require "debug"
+require "wxserpent"
+fancypath = "../cond/fancyslider"
+require fancypath
+// Latency handler is present here (but stage is already included by
+//    plpayerbase.srp, so this is a no-op:
+require "../cond/stage"
+
+NOW_X = 50
+STAT_W = 130  // width of NOW and NEXT columns
+NEXT_X = NOW_X + STAT_W
+PEX_X = NEXT_X + STAT_W  // PEX: Player Extra stuff
+TEXT_W = 60
+TEXT_H = 20
+CTRL_H = 20
+
+
+class Player_panel:
+    var x, y, w, h;
+    
+    def init(win, x_, y_, w_, h_):
+        x = x_
+        y = y_
+        w = w_
+        h = h_
+        
+        tag_now = Statictext(win, "Now", NOW_X, y, TEXT_W, TEXT_H)
+        tag_next = Statictext(win, "Next", NEXT_X, y, TEXT_W, TEXT_H)
+
+        // Here we define statictext for updating the GUI of 
+        // Player_panel.
+
+        var ry = y + TEXT_H
+            
+        tag_bpm = Statictext(win, "BPM", x, ry, TEXT_W, TEXT_H)
+        bpm_now = Statictext(win, "60", NOW_X, ry, TEXT_W, TEXT_H)
+        bpm_next = Statictext(win, "60", NEXT_X, ry, TEXT_W, TEXT_H)
+        enable_button = Checkbox(win, "Enable", PEX_X, ry, 100, CTRL_H)
+        enable_button.set_value(t)
+        enable_button.method = 'enable_handler'
+        enable_button.target = this
+        
+        ry = ry + TEXT_H
+        tag_beat = Statictext(win, "Beats", x, ry, TEXT_W, TEXT_H)
+        beat_now = Statictext(win, "4", NOW_X, ry, TEXT_W, TEXT_H)
+        beat_next = Statictext(win, "4", NEXT_X, ry, TEXT_W, TEXT_H)
+
+        ry = ry + TEXT_H
+        tag_scale = Statictext(win, "Scale", x, ry, TEXT_W, TEXT_H)
+        scale_now = Statictext(win, "C", NOW_X, ry, TEXT_W, TEXT_H)
+        scale_next = Statictext(win, "C", NEXT_X, ry, TEXT_W, TEXT_H)
+        downbeat_pnl = Panel(win, PEX_X, ry, 100, 80)
+        downbeat_pnl.set_color("GRAY")
+        ry = ry + TEXT_H
+        tag_chord = Statictext(win, "Chord", x, ry, TEXT_W, TEXT_H)
+        chord_now = Statictext(win, "C", NOW_X, ry, TEXT_W, TEXT_H)
+        chord_next = Statictext(win, "C", NEXT_X, ry, TEXT_W, TEXT_H)
+
+        ry = ry + TEXT_H
+        tag_bass = Statictext(win, "Bass", x, ry, TEXT_W, TEXT_H)
+        bass_now = Statictext(win, "0", NOW_X, ry, TEXT_W, TEXT_H)
+        bass_next = Statictext(win, "0", NEXT_X, ry, TEXT_W, TEXT_H)
+
+
+        ry = ry + TEXT_H
+        tag_style = Statictext(win, "Style", x, ry, TEXT_W, TEXT_H)
+        style_now = Statictext(win, "sync", NOW_X, ry, TEXT_W, TEXT_H)
+        style_next = Statictext(win, "sync", NEXT_X, ry, TEXT_W, TEXT_H)
+
+        ry = ry + TEXT_H
+        tag_play = Statictext(win, "Play", x, ry, TEXT_W, TEXT_H)
+        play_now = Statictext(win, "NO", NOW_X, ry, TEXT_W, TEXT_H)
+        play_next = Statictext(win, "NO", NEXT_X,  ry, TEXT_W, TEXT_H)
+
+        ry = ry + TEXT_H + 10
+        laten_slid = Fancy_slider(win, "Latency", x, ry, STAGE_WIDTH,
+                                  25, 60, -100, 100, 0, 'integer')
+        laten_slid.method = 'latency_handler'
+        if get_os() == 'windows':
+            update_font(8)
+
+    def enable_handler(obj, event, x, y)
+        player_enabled = x
+
+    def update_style_to(style, state):
+        if tolower(state) == "now":
+            style_now.set_string(str(style))
+        elif tolower(state) == "next":
+            style_next.set_string(str(style))
+
+    def update_bass_to(bass, state):
+        if tolower(state) == "now":
+            bass_now.set_string(str(bass))
+        elif tolower(state) == "next":
+            bass_next.set_string(str(bass))
+
+    def update_chord_to(chord, state):
+        if tolower(state) == "now":
+            chord_now.set_string(str(chord))
+        elif tolower(state) == "next":
+            chord_next.set_string(str(chord))
+
+    def update_scale_to(scale, state):
+        if tolower(state) == "now":
+            scale_now.set_string(str(scale))
+        elif tolower(state) == "next":
+            scale_next.set_string(str(scale))
+
+    def update_bpm_to(bpm, state):
+        if tolower(state) == "now":
+            bpm_now.set_string(str(bpm))
+        elif tolower(state) == "next":
+            bpm_next.set_string(str(bpm))
+
+    def update_beat_to(beat, state):
+        if tolower(state) == "now":
+            beat_now.set_string(str(beat))
+        elif tolower(state) == "next":
+            beat_next.set_string(str(beat))
+
+    def flash_downbeat()
+        display "flash_downbeat"
+        // delay because MIDI latency is around 100ms
+        rtsched.cause(0.1, downbeat_pnl, 'set_color', "GREEN")
+        rtsched.cause(0.5, downbeat_pnl, 'set_color', "GRAY")
+
+    def update_font(font_size):
+        tag_now.set_font(font_size, 0, 0, 0, nil, "")
+        tag_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_bpm.set_font(font_size, 0, 0, 0, nil, "")
+        bpm_now.set_font(font_size, 0, 0, 0, nil, "")
+        bpm_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_beat.set_font(font_size, 0, 0, 0, nil, "")
+        beat_now.set_font(font_size, 0, 0, 0, nil, "")
+        beat_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_scale.set_font(font_size, 0, 0, 0, nil, "")
+        scale_now.set_font(font_size, 0, 0, 0, nil, "")
+        scale_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_chord.set_font(font_size, 0, 0, 0, nil, "")
+        chord_now.set_font(font_size, 0, 0, 0, nil, "")
+        chord_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_bass.set_font(font_size, 0, 0, 0, nil, "")
+        bass_now.set_font(font_size, 0, 0, 0, nil, "")
+        bass_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_style.set_font(font_size, 0, 0, 0, nil, "")
+        style_now.set_font(font_size, 0, 0, 0, nil, "")
+        style_next.set_font(font_size, 0, 0, 0, nil, "")
+        tag_play.set_font(font_size, 0, 0, 0, nil, "")
+        play_now.set_font(font_size, 0, 0, 0, nil, "")
+        play_next.set_font(font_size, 0, 0, 0, nil, "")
+        
+
+def demo():
+    my_window = Player_panel(0, 5, 5, 500, 500)
+
+
+

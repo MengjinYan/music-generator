@@ -1,0 +1,67 @@
+# libriffs - Predefined riffs
+require "utils"
+require "debug"
+require "libmidi"
+
+# adopted from http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.91.3832&rep=rep1&type=pdf
+riffs = [
+"Eb4", "D4", "A4", "F4", "E4", "C5", "A4", "A4", #  0
+"F4", "A4", "Eb5", "D5", "E4", "A4", "C5", "A4", #  1 
+"Ab4", "A4", "H", "G5",  "H", "Eb5", "C5", "E5", #  2 
+"Ab4", "A4", "B4", "C5", "Eb5", "E5", "Ab5", "A5", #  3 
+"A4", "Bb4", "B4", "C5", "Db5", "D5", "Eb5", "E5", #  4  
+"A4", "Bb4", "B4", "C5", "E5", "Eb5", "D5", "C5", #  5  
+"A4", "B4", "C5", "A4",  "B4", "C5", "D5", "B4", #  6 
+"A4", "B4", "C5", "D5",  "Eb5", "E5", "Eb5", "C5", #  7 
+"A4", "C5", "D5", "Eb5", "Gb5", "Ab5", "A5", "C6", #  8 Pat Metheny  
+"A4", "C5", "Eb5", "B4", "D5", "F5", "Eb5", "C5", #  9 
+"A4", "C5", "E5", "G5",  "B5", "A5", "G5", "E5", # 10
+"A4", "C5", "E5", "A5",  "G5", "Eb5", "C5", "A4", #  11 
+"B4", "A4", "B4", "C5",  "B4", "A4", "B4", "C5", # 12
+"B4", "A4", "B4", "C5",  "B4", "C5", "B4", "A4", # 13
+"B4", "A4", "B4", "C5",  "D5", "C5", "D5", "Eb5", #  14 
+"C5", "Ab4", "A4", "G5", "F5", "Gb5", "Eb5", "E5", #  15 Marty Cutler  
+"C5", "D5", "C5", "B4",  "C5", "B4", "A4", "H", # 16
+"C5", "D5", "Eb5", "C5", "D5", "Eb5", "F5", "D5", #  17 
+"D5", "C5", "A4", "C5",  "E5", "Eb5", "D5", "C5", #  18 
+"D5", "C5", "D5", "Eb5", "D5", "C5", "D5", "Eb5", #  19 
+"D5", "Eb5", "E5", "F5", "Gb5", "G5", "Ab5", "A5", #  20 
+"D5", "Eb5", "G5", "Eb5","D5", "C5", "B4", "C5", #  21 Charlie Keagle  
+"D5", "Eb5", "A5", "D5", "H", "C5", "A4", "E4", # 22
+"D5", "E5", "G5", "E5",  "C5", "H", "D5", "A5", #  23 Lyle Mays/Steve Cantor  
+"Eb5", "D5", "Eb5", "D5","H", "C5", "A4", "H", # 24
+"Eb5", "D5", "Eb5", "F5","Eb5", "D5", "C5", "B4", #  25 
+"Eb5", "E5", "D5", "C5", "B4", "A4", "Ab4", "A4", #  26 Richie Shulberg 
+"Eb5", "E5", "A5", "C5", "B4", "E5", "A4", "A4", #  27 
+"Eb5", "Gb5", "E5", "A4","B4", "D5", "C5", "E4", #  28 Django Rheinhart 
+"E5", "A4", "C5", "Ab4", "B4", "G4", "Gb4", "E4", #  29 David Levine  
+"E5", "Eb5", "D5", "C5", "B4", "C5", "D5", "F5", #  30 
+"G5", "E5", "D5", "B4",  "Eb5", "H", "C5", "A4", # 31
+"G5", "E5", "D5", "Gb5", "C5", "H", "A4", "H", #  32 Mike Cross 
+"Ab5", "A5", "Ab5", "A5","Ab5", "A5", "Ab5", "A5", #  33 Django Rheinhart 
+"A5", "E5", "C5", "G4",  "C5", "E5", "A5", "A5", #  34 Django Rheinhart 
+"A5", "E5", "C5", "A4",  "G5", "Eb5", "C5", "A4", #  35 
+"A5", "B5", "G5", "E5",  "F5", "Gb5", "G5", "Ab5", #  36 
+"B5", "C6", "A5", "E5",  "G5", "B5", "A5", "H", # 37
+"B5", "D6", "C6", "E5",  "Ab5", "B5", "A5", "C5", #  38 Django Rheinhart  
+"C6", "B5", "A5", "G5",  "Gb5", "E5", "Eb5", "C5" #  39 
+]
+
+npr = 8
+riff_size = len(riffs) / npr
+
+def get_riff(idx):
+    var riff = [] # array of Notes
+    var i
+    for i = 0 to npr:
+        var note = get_note(riffs[npr * idx + i])
+        # add duration of previous note for hold
+        if note == nil:
+            assert(len(riff) > 0)
+            riff[len(riff) - 1].duration = riff[len(riff) - 1].duration + 1/8
+        else:
+            riff.append(note)
+
+    return riff
+
+            

@@ -61,3 +61,4 @@ def play_a_measure()
             if cur_scale[pitch % 12]
                 vtsched.cause(1 + i * 0.25, midi_out, 'note',
                               0, pitch, 100, 0.3)
+main()

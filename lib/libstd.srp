@@ -1,0 +1,85 @@
+# libstd - Standard data structures for Serpent
+
+# FIFO queue implemented using the underlying array structure
+# TODO: use deque using rotate array or doubly linked list
+
+def _assert(x):
+    if x == 0:
+        display "error", x
+        exit()
+
+class Queue:
+    var _buf
+    var _size
+    
+    def init():
+        _buf = []
+        _size = 0
+
+    def push(x):
+        _buf = [ x ] + _buf
+        _size = _size + 1
+
+    def push_list(x):
+        _buf = x.reverse() + _buf
+        _size = _size + len(x)
+
+    def pop():
+        _size = _size - 1
+        return _buf.unappend()
+
+    def front():
+        return _buf[len(_buf) - 1]
+
+    def tail():
+        return _buf[0]
+
+    def size():
+        return _size
+
+    def get(idx):
+        _assert(idx >= 0 and idx < _size)
+        return _buf[_size - 1 - idx]
+
+    def set(idx, val):
+        _assert(idx >= 0 and idx < _size)
+        _buf[_size - 1 - idx] = val
+
+# # tests for class Queue
+# test_array = [2,1,4,3]
+# q = Queue()
+# _assert(q.size() == 0)
+# q.push(2)
+# _assert(q.front() == 2)
+# q.push(1)
+# _assert(q.size() == 2)
+# res = q.pop()
+# _assert(res == 2)
+# _assert(q.size() == 1)
+# q.push_list(test_array)
+# _assert(q.size() == 1 + len(test_array))
+# res = q.pop()
+# _assert(res == 1)
+
+# for x in test_array:
+#     front_res = q.front()
+#     pop_res = q.pop()
+#     _assert(front_res == pop_res)
+#     _assert(pop_res == x)
+
+# _assert(q.size() == 0)
+
+# q.push_list(test_array)
+# for i = 0 to len(test_array):
+#     _assert(q.get(i) == test_array[i])
+#     q.set(i, 2)
+#     _assert(q.get(i) == 2)
+#     q.set(i, test_array[i])
+#     _assert(q.get(i) == test_array[i])
+
+# q.dec_all(0.1)
+# for i = 0 to len(test_array):
+#     _assert(q.get(i) == test_array[i] - 0.1)
+
+
+

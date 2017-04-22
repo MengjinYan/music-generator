@@ -77,15 +77,16 @@ def get_note(name):
     # display "get_note", name, note_name, level, pitch
     return note
 
-class Meter:
-    var measure
-    var beat
+class Measure:
+    # time signiture
+    var length
+    var beat_unit
 
-    # measure: number of beats in a measure
-    # beat: (beat)th note equals a beat 
-    def init(measure_, beat_):
-        measure = measure_
-        beat = beat_
+    # length: number of beats in a measure
+    # beat_unit: (beat)th note equals a beat 
+    def init(length_, beat_unit_):
+        length = length_
+        beat_unit = beat_unit_
 
 class Rythm:
     var rtype

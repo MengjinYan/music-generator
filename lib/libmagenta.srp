@@ -1,0 +1,19 @@
+# libmagenta
+require "libstd"
+require "libmidi"
+require "debug"
+require "sched"
+
+fetching_period = 0.5
+note_queue = Queue()
+
+def request_RNN(note_list):
+	return
+
+def get_RNN():
+	# check if filesystem has midi file and read file
+
+def fit_measure():
+	# fetch notes from global note_queue and fit to chord, style, scale
+	# returns a Measure instance
+

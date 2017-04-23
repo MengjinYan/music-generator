@@ -35,6 +35,13 @@ class Queue:
         assertion(len(_buf) == _size and _size > 0)
         return _buf[len(_buf) - 1]
 
+    def last_n(n):
+        assertion(len(_buf) == _size and _size >= n)
+        var res = []
+        for i = 0 to n:
+            res = res + [_buf[i]]
+        return res
+
     def tail():
         assertion(len(_buf) == _size and _size > 0)
         return _buf[0]
@@ -94,5 +101,9 @@ class Queue:
 # for i = 0 to len(test_array):
 #     assertion(q.get(i) == test_array[i] - 0.1)
 
+# test_array = [2,1,4,3]
+# q = Queue()
+# q.push_list(test_array)
+# display q.last_n(3)
 
 

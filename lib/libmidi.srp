@@ -1,4 +1,6 @@
 # libmidi - Basic Operations of Midi
+require "sched"
+require "libstd"
 
 midi_status_note_off = 0x80
 midi_status_note_on = 0x90
@@ -35,20 +37,20 @@ class Midi:
 
 class Note:
     var pitch
-    # proportion of the note in a measure
-    # 0 < duration <= 1, quater note: duration = 1/4
+    # how many beats
     var duration
     # time till the note is played, for the usage of graphics
-    var graphic_time
     var velocity
     var _channel
 
     def init(pitch_, duration_):
         pitch = pitch_
         duration = duration_
+        _channel = 1
+        velocity = 110
 
-    def play(midi):
-        midi.note_on(_channel, pitch, velocity)
+    def play(midi, volume):
+        midi.note_on(_channel, pitch, volume)
 
     def play_offset(midi, pitch_offset, volume):
         midi.note_on(_channel, pitch + pitch_offset, volume)
@@ -56,116 +58,60 @@ class Note:
     def stop(midi):
         midi.note_off(_channel, pitch)
 
-pitch_map = {"C": 0, "Db": 1, "D": 2, "Eb": 3, "E": 4, "F": 5, "Gb": 6, "G": 7, "Ab": 8, "A": 9, "Bb": 10, "B": 11}
-def get_note(name):
-    if name == "R":
-        return Note(-1, 1/8)
+def play_note(midi, note, volume):
+    display "play_note", note.pitch, note.duration, the_sched.time
+    if note.pitch >= 0: # skip playing `rest`
+        note.play(midi, volume)
+        # schedule to stop this note
+        the_sched.cause(0.9 * note.duration, nil, 'stop_note', midi, note)
 
-    if name == "H":
-        return nil
-
-    var level
-    var note_offset
-    var note_name = ""
-    level = ord(name[len(name) - 1]) - ord("0")
-    var i
-    for i = 0 to len(name) - 1:
-        note_name = note_name + name[i]
-    note_offset = pitch_map[note_name]
-    var pitch = 12 * (level + 1) + note_offset
-    var note = Note(pitch, 1/8)
-    # display "get_note", name, note_name, level, pitch
-    return note
+def stop_note(midi, note):
+    note.stop(midi)
 
 class Measure:
     # time signiture
     var length
     var beat_unit
+    var notes
 
     # length: number of beats in a measure
     # beat_unit: (beat)th note equals a beat 
     def init(length_, beat_unit_):
         length = length_
         beat_unit = beat_unit_
+        notes = Queue()
 
-class Rythm:
-    var rtype
-    var _channel
-    var note_queue
-    var _next_time # count by beats
-    var meter
-    var length # count by measures
+    def add_note(note):
+        notes.push(note)
 
-    def init(channel_, start_time_, meter_, type_):
-        _channel = channel_
-        _next_time = start_time_
-        note_queue = Queue()
-        meter = meter_
-        length = 0
-        rtype = type_
+# TODO: can the final note stay on to the next measure?
+    def play(midi, vt_offset_):
+        display "play measure", vt_offset_, the_sched.time
+        var vt_time = vt_offset_
+        while notes.empty() == 0:
+            var note = notes.pop()
+            display "dispatch note", note.pitch, note.duration
+            the_sched.cause(vt_time, nil, 'play_note', midi, note, note.velocity) # TODO: change volume due to control and measure
+            vt_time = vt_time + note.duration
 
-    def add_note(note, stress):
-        if stress:
-            note.velocity = 180
-        else:
-            note.velocity = 110
+def play_measure(midi, measure, vt_offset):
+    measure.play(midi, vt_offset)
 
-        note._channel = _channel
-        note.graphic_time = _next_time
-        note_queue.push(note)
-        _next_time = _next_time + note.duration * meter.beat
-        length = length + note.duration
-
-    def add_chord(chord, stress):
-        var velocity
-        if stress:
-            velocity = 180
-        else:
-            velocity = 110
-
-        var i
-        for i = 0 to len(chord):
-            var note = chord[i]
-            note.velocity = velocity
-            note._channel = _channel
-            note.graphic_time = _next_time
-            note_queue.push(note)
-
-        _next_time = _next_time + chord[0].duration * meter.beat
-        length = length + chord[0].duration
-
-    def time_advance(val):
-        _next_time = _next_time - val
-        var i
-        for i = 0 to note_queue.size():
-            var note = note_queue.get(i)
-            note.graphic_time = note.graphic_time - val
-            note_queue.set(i, note)
-
-    def size():
-        return note_queue.size()
-
-    def dispatch_note():
-        var note = note_queue.pop()
-        length = length - note.duration
-        return note
-
-    def get_recent_notes():
-        var cnt = 0.0
-        var idx = 0
-        var notes = []
-        while idx < note_queue.size() and note_queue.get(idx).graphic_time < meter.measure:
-            var tmp = note_queue.get(idx)
-            if tmp.pitch >= 0:
-                notes.append(tmp)
-            idx = idx + 1
-        return notes
-
-def choose_or_not(prob):
-    var rand = random()
-    if rand < prob:
-        return 1
-    else:
-        return 0
+################ TESTS ################
 
 
+# def measure_test():
+#     midi = Midi(midi_out_default(), 100, 10)
+#     sched_init()
+#     vtsched.set_bps(2)
+#     measure = Measure(4, 4)
+#     measure.add_note(Note(70, 1))
+#     measure.add_note(Note(70, 0.5))
+#     measure.add_note(Note(70, 0.5))
+#     measure.add_note(Note(70, 1))
+#     measure.add_note(Note(70, 1))
+#     display "measure init, done"
+#     vtsched.cause(0, nil, 'play_measure', midi, measure, 0)
+#     sched_run()
+
+# measure_test()

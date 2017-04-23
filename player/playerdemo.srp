@@ -17,7 +17,7 @@ require "playerbase"
 // - cannot handle cur_beats_per_measure properly (assumes 4)
 // - plays absurdly fast at faster tempos
 //
-def play_a_measure()
+def play_a_measure():
     # compute a measure using these variables:
     #    cur_style - a symbol representing style to play (if
     #       this is not your style, do not play)
@@ -61,4 +61,7 @@ def play_a_measure()
             if cur_scale[pitch % 12]
                 vtsched.cause(1 + i * 0.25, midi_out, 'note',
                               0, pitch, 100, 0.3)
+
+
+
 main()

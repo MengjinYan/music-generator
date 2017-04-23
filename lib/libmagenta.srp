@@ -9,9 +9,13 @@ fetching_period = 0.5
 note_queue = Queue()
 minimum_queue_size = 120
 
-def request_RNN(note_list):
-    display "request_RNN", note_list, the_sched.time
-    the_sched.cause(fetching_period, nil, 'get_RNN')
+RNN_flag = 0
+def request_RNN():
+    if RNN_flag == 0:
+        display "request_RNN", the_sched.time
+        RNN_flag = 1
+        # run RNN
+        rtsched.cause(fetching_period, nil, 'get_RNN')
     return
 
 def get_RNN():
@@ -19,14 +23,16 @@ def get_RNN():
     # check if filesystem has midi file and read file
     var f = open("test.mid", "r")
     if f is nil:
-        the_sched.cause(fetching_period, nil, 'get_RNN')
+        rtsched.cause(fetching_period, nil, 'get_RNN')
     else:
         # TODO: just testing here
         for i = 0 to 120:
             note_queue.push(Note(70, 1))
-    display note_queue.size()
-    if note_queue.size() < minimum_queue_size:
-        the_sched.cause(0, nil, 'request_RNN', [])
+        # TODO: delete file
+        RNN_flag = 0
+        display note_queue.size()
+        if note_queue.size() < minimum_queue_size:
+            rtsched.cause(0, nil, 'request_RNN')
 
 def fit_measure():
     display "fit_measure", the_sched.time
@@ -37,7 +43,8 @@ def fit_measure():
     for i = 0 to 4:
         measure.add_note(note_queue.pop())
     if note_queue.size() < minimum_queue_size:
-        the_sched.cause(0, nil, 'request_RNN', [])
+        rtsched.cause(0, nil, 'request_RNN')
+
     return measure
 
 def fit_and_play(midi):

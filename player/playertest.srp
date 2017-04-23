@@ -7,7 +7,7 @@ def demo_test():
     midi = Midi(midi_out_default(), 100, 10)
     sched_init()
     vtsched.set_bps(2)
-    vtsched.cause(0, nil, 'request_RNN', [])
+    rtsched.cause(0, nil, 'get_RNN')
     vtsched.cause(5, nil, 'fit_and_play', midi)
     sched_run()
 

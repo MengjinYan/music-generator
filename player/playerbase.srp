@@ -6,6 +6,7 @@
 require "../cond/stage" // lots of shared code here with server
 require "player_panel"
 require "../cond/chat"
+require "../lib/libmagenta"
 
 APPLICATION = "cmsip"
 PITCH = 64
@@ -69,9 +70,10 @@ def main():
     default_window.set_size(STAGE_WIDTH + 15, 750)
     // position to the right of conductor (whether or not it is open)
     default_window.set_position(STAGE_WIDTH + 420, 25)
+    midi = Midi(midi_out_default(), 100, 10)
     rtsched.start_use()
     rtsched.cause(0, nil, 'wait_for_clock_sync')
-    
+    rtsched.cause(0, nil, 'fit_and_play', midi)
     rtsched.finish_use()
     
 

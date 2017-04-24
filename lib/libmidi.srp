@@ -42,6 +42,7 @@ class Note:
     # time till the note is played, for the usage of graphics
     var velocity
     var _channel
+    var style
 
     def init(pitch_, duration_):
         pitch = pitch_
@@ -73,6 +74,7 @@ class Measure:
     var length
     var beat_unit
     var notes
+    var style
 
     # length: number of beats in a measure
     # beat_unit: (beat)th note equals a beat 

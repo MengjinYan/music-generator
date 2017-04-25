@@ -1,1 +1,1 @@
-melody_rnn_generate --config=lookback_rnn --bundle_file=/Users/yanmengjin1/software/lookback_rnn.mag --output_dir= ./output/ --num_outputs=2 --num_steps=120 --primer_melody=[69,-2,69,-2,71,-2,72,-2,-2,-2,72,-2,67,-2,-2,-2]
+melody_rnn_generate --config=lookback_rnn --bundle_file=/Users/yanmengjin1/software/lookback_rnn.mag --output_dir=./output/ --num_outputs=2 --num_steps=120 --primer_melody=[69,-2,69,-2,71,-2,72,-2,-2,-2,72,-2,67,-2,-2,-2] > 

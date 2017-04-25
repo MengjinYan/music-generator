@@ -42,10 +42,11 @@ def get_command(num_outputs, num_steps, primer_melody):
     retval = retval + "melody_rnn_generate "
     retval = retval + "--config=lookback_rnn "
     retval = retval + "--bundle_file=/Users/yanmengjin1/software/lookback_rnn.mag "
-    retval = retval + "--output_dir= ./output/ "
+    retval = retval + "--output_dir=./output/ "
     retval = retval + "--num_outputs=" + str(num_outputs) + " "
     retval = retval + "--num_steps=" + str(num_steps) + " "
     retval = retval + "--primer_melody=" + melody_str
+    retval = retval + " > "
 
     # display retval
     var f = open("magenta.sh", "wb")
@@ -126,8 +127,9 @@ def get_magenta_files():
     var count = 0
     var retval = []
     for i = 0 to len(dirlist):
-        if subseq(dirlist[i], -4) == ".mid":
+        if len(retval) < 2 and subseq(dirlist[i], -4) == ".mid":
             retval.append("./output/" + dirlist[i])
+    
     if len(retval) == 2:
         return retval
     else:
@@ -247,12 +249,12 @@ def fit_chord(notes_list):
             else:
                 if random() < p:
                     var new_note_index = note_index
-                    while cur_chord[note_index] == 0:
+                    while cur_chord[new_note_index] == 0:
                         new_note_index = (new_note_index + 1) % 12
                     notes_list[i].pitch = notes_list[i].pitch + 
                         new_note_index - note_index
                 p = p + 0.1
-
+    display "fit_chord, done"
     return notes_list
 
 def fit_measure(note_queue):

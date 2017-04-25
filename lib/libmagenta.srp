@@ -7,7 +7,7 @@ require "mfread"
 
 # in unit of beat
 fetching_period = 0.5
-note_queues = [Queue() Queue()]
+note_queues = [Queue(), Queue()]
 minimum_queue_size = 120
 
 # Rhythem patterns
@@ -58,7 +58,7 @@ def last_measure():
     measure.style = cur_style
 
     # fit style/rhythem
-    var notes_list = note_queue.last_n(NUM_LAST_NOTES)
+    var notes_list = note_queues[0].last_n(NUM_LAST_NOTES)
     if notes_list[0].style == cur_style:
         var total_beats = 0
         for note in notes_list:
@@ -150,7 +150,7 @@ def get_RNN():
         RNN_flag = 0
 
 # fit rhythem/style
-def fit_rhythem(measure):
+def fit_rhythem(measure, note_queue):
     var total_beats = 0
     var note = note_queue.pop()
 
@@ -239,7 +239,7 @@ def fit_chord(notes_list):
 
     return notes_list
 
-def fit_measure():
+def fit_measure(note_queue):
     display "fit_measure", the_sched.time
     # fetch notes from global note_queue and fit to chord, style, scale
     # returns a Measure instance
@@ -264,7 +264,7 @@ def fit_measure():
     measure.style = cur_style
     
     # fit style/rhythem
-    measure = fit_rhythem(measure)
+    measure = fit_rhythem(measure, note_queue)
 
     # fit scale
     measure.notes = fit_scale(measure.notes)
@@ -276,8 +276,10 @@ def fit_measure():
     #     return nil
     # for i = 0 to 4:
     #     measure.add_note(note_queue.pop())
-    if note_queue.size() < minimum_queue_size:
-        rtsched.cause(0, nil, 'request_RNN')
+    # if note_queue.size() < minimum_queue_size:
+    #     rtsched.cause(0, nil, 'request_RNN')
+
+    check_queue_length()
 
     return measure
 

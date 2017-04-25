@@ -103,7 +103,7 @@ RNN_flag = 0
 def request_RNN(flag):
     if RNN_flag == 0:
         var measure
-        if flag == 1:
+        if joined == t:
             display "request_RNN", the_sched.time
             # TODO: construct request
             # TODO: need to assert if the queue is left more than 10 nodes        

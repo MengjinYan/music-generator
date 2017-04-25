@@ -12,7 +12,11 @@ have_timemap = false // set when timemap is first called
 
 # Globals for use by composition algorithms. 
 cur_scale = [0 for i = 0 to 12] // e.g. [true, false, true, false, ...]
+cur_scale[0] = 1
 cur_chord = [0 for i = 0 to 12] // similar
+cur_chord[0] = 1
+cur_chord[4] = 1
+cur_chord[7] = 1
 cur_bass = 0 // C initially     // integer pitch class from 0 thru 11
 
 

@@ -226,17 +226,17 @@ def fit_chord(notes_list):
     # Check if the measure fit
     var in_chord = 0
     for note in notes_list:
-        var note_index = notes_list[i].pitch % 12
+        var note_index = note.pitch % 12
         if cur_chord[note_index] == 1:
             in_chord = in_chord + 1
-
+    display "1"
     if real(in_chord) / real(len(notes_list)) >= 0.5:
         return notes_list
     else:
         # fit chord
         var p = 0.5
         for note in notes_list:
-            note_index = notes_list[i].pitch % 12
+            note_index = note.pitch % 12
             if cur_chord[note_index] == 1:
                 p = 0.1
             else:
@@ -278,10 +278,15 @@ def fit_measure(note_queue):
     measure = fit_rhythem(measure, note_queue)
 
     # fit scale
-    measure.notes = fit_scale(measure.notes.get_list())
+    var notes = measure.notes.get_list()
+
+    notes = fit_scale(notes)
 
     # fit chord
-    measure.notes = fit_chord(measure.notes.get_list())
+    notes = fit_chord(notes)
+
+    measure.notes = Queue()
+    measure.notes.push_list(notes)
 
     # if note_queue.size() < 4:
     #     return nil

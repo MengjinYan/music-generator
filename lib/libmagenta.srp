@@ -10,12 +10,29 @@ fetching_period = 0.5
 note_queue = Queue()
 minimum_queue_size = 120
 
+# Rhythem patterns
+# number of beats
+
+# 2nd and 4th down beat for the 3rd one
+rock_rhythem = [[0.5, 0.5, 0.75, 0.5, 0.5, 0.25, 0.5, 0.5], \
+                [1, 0.5, 1, 0.5, 0.5, 0.5], \
+                [0.5, 0.5, 0.5, 0.25, 0.25, 0.5, 0.5, 0.5, 0.25, 0.25], \
+                [1, 0.75, 0.25, 0.25, 0.25, 0.5, 0.5, 0.25, 0.25]]
+default_rhythem = [1, 0.5, 1, 0.5, 0.5, 0.5]
+
+# chord threashold
+CHORD_THREASHOLD = 0.5
+
+
 RNN_flag = 0
 def request_RNN():
     if RNN_flag == 0:
         display "request_RNN", the_sched.time
         RNN_flag = 1
         # TODO: construct request
+
+        
+        # need to assert if the queue is left more than 10 nodes
         system("./a.sh &")
         rtsched.cause(fetching_period, nil, 'get_RNN')
     return
@@ -37,16 +54,121 @@ def get_RNN():
         if note_queue.size() < minimum_queue_size:
             rtsched.cause(0, nil, 'request_RNN')
 
+# fit rhythem/style
+def fit_rhythem(measure):
+    var total_beats = 0
+    var note = note_queue.pop()
+
+    # If the style is not changed
+    if note.style == cur_style:
+        measure.add_note(note)
+        if note.duration > cur_beats_per_measure:
+            note.duration = cur_beats_per_measure
+        total_beats += note.duration
+        
+        while total_beats < measure:
+            note = note_queue.pop()
+            if note.duration > cur_beats_per_measure - total_beats:
+                note.duration = cur_beats_per_measure - total_beats
+            measure.add_note(note)
+            total_beats += note.duration
+
+    # If the style is changed
+    else:
+        if cur_style == 'rock':
+            # choose a random rhythem
+            var rhythem_num = int(4*random())
+            for i in rock_rhythem[rhythem_num]:
+                note = note_queue.pop()
+                note.duration = i
+                measure.add_note(note)
+
+        else:
+            # use the default rhythem
+            for i in default_rhythem:
+                note = note_queue.pop()
+                note.duration = i
+                measure.add_note(note)
+
+    return measure
+
+
+def fit_scale(notes_list):
+    for i = 0 to len(notes_list):
+        var note_index = notes_list[i].pitch % 12
+        var new_note_index = note_index
+        while cur_scale[new_note_index] == 0:
+            new_note_index = (new_note_index + 1) % 12
+        notes_list[i].pitch = notes_list[i].pitch \
+            + new_note_index - note_index
+
+    return notes_list
+
+def fit_chord(notes_list):
+    # Check if the measure fit
+    var in_chord = 0
+    for note in notes_list:
+        var note_index = notes_list[i].pitch % 12
+        if cur_chord[note_index] == 1:
+            in_chord += 1
+
+    if real(in_chord) / real(len(notes_list)) >= 0.5:
+        return notes_list
+    else:
+        # fit chord
+        var p = 0.5
+        for note in notes_list:
+            var note_index = notes_list[i].pitch % 12
+            if cur_chord[note_index] == 1:
+                p = 0.1
+                continue
+            else:
+                if random() < p:
+                    var new_note_index = note_index
+                    while cur_chord[note_index] == 0:
+                        new_note_index = (new_note_index + 1) % 12
+                    notes_list[i].pitch = notes_list[i].pitch \
+                        + new_note_index - note_index
+
+    return notes_list
+
 def fit_measure():
     display "fit_measure", the_sched.time
     # fetch notes from global note_queue and fit to chord, style, scale
     # returns a Measure instance
-    # TODO: just testing here
-    var measure = Measure(4, 4)
-    if note_queue.size() < 4:
-        return nil
-    for i = 0 to 4:
-        measure.add_note(note_queue.pop())
+
+    # compute a measure using these variables:
+    #    cur_style - a symbol representing style to play (if
+    #       this is not your style, do not play)
+    #    cur_start_beat - what beat to start on if you are stopped
+    #    cur_stop_beat - what beat to stop on if you have started (you can
+    #       stop slightly late; generally you should not start any notes 
+    #       at or after tm_stop_beat but you can play a short note on 
+    #       tm_stop_beat if it is stylistically sensible.)
+    #    cur_beats_per_measure - the current time signature as an integer
+    #    cur_bps - current beats per second (the vtsched will implement this
+    #       but reading the vtsched timemap slope is not reliable because
+    #       vtsched may be updated instantaneously after this call.
+    #    cur_scale - boolean array representing current scale
+    #    cur_chord - boolean array representing current chord
+    #    cur_bass - integer representing root of chord
+    #
+    var measure = Measure(cur_beats_per_measure, 4)
+    measure.style = cur_style
+    
+    # fit style/rhythem
+    measure = fit_rhythem(measure)
+
+    # fit scale
+    measure.notes = fit_scale(measure.notes)
+
+    # fit chord
+    measure.notes = fit_chord(measure.notes)
+
+    # if note_queue.size() < 4:
+    #     return nil
+    # for i = 0 to 4:
+    #     measure.add_note(note_queue.pop())
     if note_queue.size() < minimum_queue_size:
         rtsched.cause(0, nil, 'request_RNN')
 

@@ -39,7 +39,6 @@ class Note:
     var pitch
     # how many beats
     var duration
-    # time till the note is played, for the usage of graphics
     var velocity
     var _channel
     var style

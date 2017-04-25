@@ -136,7 +136,7 @@ def fit_rhythem(measure):
             note.duration = cur_beats_per_measure
         total_beats = total_beats + note.duration
         
-        while total_beats < measure:
+        while total_beats < cur_beats_per_measure:
             note = note_queue.pop()
             if note.duration > cur_beats_per_measure - total_beats:
                 note.duration = cur_beats_per_measure - total_beats
@@ -147,18 +147,30 @@ def fit_rhythem(measure):
     else:
         if cur_style == 'rock':
             # choose a random rhythem
+            total_beats = 0
             var rhythem_num = int(4*random())
             for i in rock_rhythem[rhythem_num]:
-                note = note_queue.pop()
-                note.duration = i
-                measure.add_note(note)
+                if total_beats < cur_beats_per_measure:
+                    note = note_queue.pop()
+                    if note.duration > cur_beats_per_measure - total_beats:
+                        note.duration = cur_beats_per_measure - total_beats
+                    else:
+                        note.duration = i
+                    total_beats = total_beats + note.duration
+                    measure.add_note(note)
 
         else:
             # use the default rhythem
+            total_beats = 0
             for i in default_rhythem:
-                note = note_queue.pop()
-                note.duration = i
-                measure.add_note(note)
+                if total_beats < cur_beats_per_measure:
+                    note = note_queue.pop()
+                    if note.duration > cur_beats_per_measure - total_beats:
+                        note.duration = cur_beats_per_measure - total_beats
+                    else:
+                        note.duration = i
+                    total_beats = total_beats + note.duration
+                    measure.add_note(note)
 
     return measure
 
@@ -191,7 +203,6 @@ def fit_chord(notes_list):
             note_index = notes_list[i].pitch % 12
             if cur_chord[note_index] == 1:
                 p = 0.1
-                continue
             else:
                 if random() < p:
                     var new_note_index = note_index
@@ -199,6 +210,7 @@ def fit_chord(notes_list):
                         new_note_index = (new_note_index + 1) % 12
                     notes_list[i].pitch = notes_list[i].pitch + 
                         new_note_index - note_index
+                p = p + 0.1
 
     return notes_list
 
@@ -246,7 +258,7 @@ def fit_measure():
 
 def fit_and_play(midi):
     display "fit_and_play", the_sched.time
-    the_sched.cause(4, nil, 'fit_and_play', midi)
+    the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
     var measure = fit_measure()
     if measure is not nil:
         measure.play(midi, 0)

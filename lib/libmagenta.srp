@@ -101,10 +101,10 @@ def last_measure():
 
 RNN_flag = 0
 def request_RNN(flag):
+    display "request_RNN", the_sched.time, joined
     if RNN_flag == 0:
         var measure
-        if joined == t:
-            display "request_RNN", the_sched.time
+        if joined == 1:
             # TODO: construct request
             # TODO: need to assert if the queue is left more than 10 nodes        
             measure = last_measure()
@@ -165,12 +165,12 @@ def get_RNN():
 
 # fit rhythem/style
 def fit_rhythem(measure, note_queue):
-    display "fit_rhythem"
+    display "fit_rhythem", cur_style
     var total_beats = 0
     var note = note_queue.pop()
 
     # If the style is not changed
-    if note.style == cur_style:
+    if 0: # note.style == cur_style:
         measure.add_note(note)
         if note.duration > cur_beats_per_measure:
             note.duration = cur_beats_per_measure
@@ -216,20 +216,25 @@ def fit_rhythem(measure, note_queue):
 
 
 def fit_scale(notes_list):
-    display "fit_scale"
+    display "fit_scale", cur_scale
     # TODO: !!!infinite loop here!!!
     for i = 0 to len(notes_list):
         var note_index = notes_list[i].pitch % 12
         var new_note_index = note_index
-        while cur_scale[new_note_index] == 0:
+        var j = 0
+        while (cur_scale[new_note_index] == 0) and (j < 12):
             new_note_index = (new_note_index + 1) % 12
+            j = j + 1
         notes_list[i].pitch = notes_list[i].pitch +
             new_note_index - note_index
+
+        if notes_list[i].pitch > 60: 
+            notes_list[i].pitch = notes_list[i].pitch - 12
 
     return notes_list
 
 def fit_chord(notes_list):
-    display "fit_chord"
+    display "fit_chord", cur_chord
     # Check if the measure fit
     var in_chord = 0
     for note in notes_list:
@@ -249,11 +254,17 @@ def fit_chord(notes_list):
             else:
                 if random() < p:
                     var new_note_index = note_index
-                    while cur_chord[new_note_index] == 0:
+                    var j = 0
+                    while (cur_chord[new_note_index] == 0) and (j < 12):
                         new_note_index = (new_note_index + 1) % 12
+                        j = j + 1
                     notes_list[i].pitch = notes_list[i].pitch + 
                         new_note_index - note_index
-                p = p + 0.1
+                p = p + 0.2
+
+            if notes_list[i].pitch > 60: 
+                notes_list[i].pitch = notes_list[i].pitch - 12
+
     display "fit_chord, done"
     return notes_list
 
@@ -308,8 +319,8 @@ def fit_measure(note_queue):
 
 def fit_and_play(midi):
 
-    display "fit_and_play", the_sched.time
-    the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
+    display "fit_and_play", the_sched.time, joined
+    # the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
     if joined == false:
         return
     for queue in note_queues:

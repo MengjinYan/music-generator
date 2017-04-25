@@ -50,7 +50,7 @@ class Note:
         velocity = 110
 
     def play(midi, volume):
-        midi.note_on(_channel, pitch, volume)
+        midi_out.note(_channel, pitch, volume, duration)
 
     def play_offset(midi, pitch_offset, volume):
         midi.note_on(_channel, pitch + pitch_offset, volume)

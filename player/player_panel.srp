@@ -4,6 +4,7 @@
 
 require "debug"
 require "wxserpent"
+require "libmagenta"
 fancypath = "../cond/fancyslider"
 require fancypath
 // Latency handler is present here (but stage is already included by
@@ -125,6 +126,7 @@ class Player_panel:
     def flash_downbeat()
         display "flash_downbeat"
         // delay because MIDI latency is around 100ms
+        // vtsched.cause(0, nil, 'fit_and_play', midi_)
         rtsched.cause(0.1, downbeat_pnl, 'set_color', "GREEN")
         rtsched.cause(0.5, downbeat_pnl, 'set_color', "GRAY")
 

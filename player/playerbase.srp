@@ -71,13 +71,13 @@ def main():
     default_window.set_size(STAGE_WIDTH + 15, 750)
     // position to the right of conductor (whether or not it is open)
     default_window.set_position(STAGE_WIDTH + 420, 25)
-    midi = Midi(midi_out_default(), 100, 10)
+    midi_ = Midi(midi_out_default(), 100, 10)
     rtsched.start_use()
     rtsched.cause(0, nil, 'request_RNN', 0)
     rtsched.cause(0, nil, 'wait_for_clock_sync')
     rtsched.finish_use()
 
-    vtsched.cause(10, nil, 'fit_and_play', midi)
+    # vtsched.cause(10, nil, 'fit_and_play', midi_)
 
 
 def player_init():

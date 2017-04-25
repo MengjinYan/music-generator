@@ -9,6 +9,7 @@ require "sched"
 require "prefs"
 require "midi-io"
 require "mididevice"
+require "libmidi"
 
 TCP = true // used in o2_send_finish()
 UDP = false
@@ -104,7 +105,7 @@ class Stage (Canvas)
         stage.refresh(t)
         vtsched.cause(1, this, 'beat_update')
 
-    def metronome()
+    def metronome():
         var pitch = PITCH
         if beat == 0
             pitch = pitch + 2
@@ -114,7 +115,8 @@ class Stage (Canvas)
                 if play_now // conductor does not have a play_now Statictext
                     play_now.set_string("YES")
                 if style != 'sync' and player_enabled
-                    play_a_measure() // implemented in player only
+                    # play_a_measure() // implemented in player only
+                    fit_and_play(midi_)
                     if display_panel
                         display_panel.flash_downbeat()
             elif play_now

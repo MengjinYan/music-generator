@@ -28,28 +28,28 @@ def get_command(num_outputs, num_steps, primer_melody):
     var melody_str = ""
     var note_list = []
     while primer_melody.notes.size() > 0:
-        display primer_melody.notes.size(), len(note_list)
         note_list.append(primer_melody.notes.pop())
-    display "loop end"
-    display len(note_list)
+
     for i = 0 to len(note_list):
         var note_ = note_list[i]
         melody_str = melody_str + str(note_.pitch) + ","
         for j = 1 to note_.duration / 0.25:
             melody_str = melody_str + "-2,"
     melody_str = "[" + subseq(melody_str, 0, -1) + "]"
-    display melody_str
 
     var retval = ""
     retval = retval + "melody_rnn_generate "
     retval = retval + "--config=lookback_rnn "
     retval = retval + "--bundle_file=/Users/yanmengjin1/software/lookback_rnn.mag "
-    retval = retval + "--output_dir= ./ "
+    retval = retval + "--output_dir= ./output/ "
     retval = retval + "--num_outputs=" + str(num_outputs) + " "
     retval = retval + "--num_steps=" + str(num_steps) + " "
     retval = retval + "--primer_melody=" + melody_str
 
-    display retval
+    # display retval
+    var f = open("magenta.sh", "wb")
+    f.write(retval)
+    f.close()
     return retval
 
 def last_measure():
@@ -78,7 +78,7 @@ def request_RNN():
         var measure = last_measure()
 
         # need to assert if the queue is left more than 10 nodes
-        system("./a.sh &")
+        system("./magenta.sh &")
         rtsched.cause(fetching_period, nil, 'get_RNN')
     return
 
@@ -248,18 +248,18 @@ def parse_smf(file):
 # res = parse_smf("test.mid")
 # for i = 0 to len(res):
 #     display i, res[i].pitch, res[i].duration
-# notelist = parse_smf("test.mid")
-# queue = Queue()
-# queue.push_list(notelist)
-# lastnotes = queue.last_n(10)
+notelist = parse_smf("test.mid")
+queue = Queue()
+queue.push_list(notelist)
+lastnotes = queue.last_n(10)
 
-# while queue.size() > 0:
-#     var note_ = queue.pop()
-#     display note_.pitch, note_.duration
+while queue.size() > 0:
+    var note_ = queue.pop()
+    # display note_.pitch, note_.duration
 
-# m = Measure(4,4)
-# for i = 1 to 10:
-#     m.add_note(lastnotes[i])
-# get_command(2, 120, m)
+m = Measure(4,4)
+for i = 1 to 10:
+    m.add_note(lastnotes[i])
+get_command(2, 120, m)
 
 

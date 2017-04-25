@@ -81,7 +81,7 @@ def last_measure():
             start = NUM_LAST_NOTES - rhythem_len
             
             for i = start to NUM_LAST_NOTES:
-                notes_list[i].duration = rock_rhythem[rhythem_num][i - start]
+                notes_list[i].duration = default_rhythem[i - start]
                 measure.add_note(notes_list[i])
 
     # fit scale

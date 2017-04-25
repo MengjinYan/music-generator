@@ -7,7 +7,7 @@ require "mfread"
 
 # in unit of beat
 fetching_period = 0.5
-note_queue = Queue()
+note_queues = [Queue() Queue()]
 minimum_queue_size = 120
 
 # Rhythem patterns
@@ -99,30 +99,55 @@ def request_RNN():
         display "request_RNN", the_sched.time
         RNN_flag = 1
         # TODO: construct request
-        
+        # TODO: need to assert if the queue is left more than 10 nodes        
         var measure = last_measure()
-
-        # need to assert if the queue is left more than 10 nodes
+        get_command(2, 120, measure)
         system("./magenta.sh &")
         rtsched.cause(fetching_period, nil, 'get_RNN')
     return
+
+def get_magenta_files():
+    var dirlist = listdir("./output/")
+    if len(dirlist) < 2:
+        return nil
+    var count = 0
+    var retval = []
+    for i = 0 to len(dirlist):
+        if subseq(dirlist[i], -4) == ".mid":
+            retval.append(dirlist[i])
+    if len(retval) == 2:
+        return retval
+    else:
+        return nil
+
+def check_queue_length():
+    var flag = 0
+    for i = 0 to len(note_queues):
+        if note_queues[i].size() < minimum_queue_size:
+            flag = 1
+
+    if flag == 1:
+        rtsched.cause(0, nil, 'request_RNN')
+
+
 
 def get_RNN():
     display "get_RNN", the_sched.time
     # check if filesystem has midi file and read file
     var f = open("test.mid", "r")
-    if f is nil:
+
+    var filelist = get_magenta_files()
+    if filelist is nil:
         rtsched.cause(fetching_period, nil, 'get_RNN')
     else:
-        # TODO: just testing here
-        var note_list = parse_smf("test.mid")
-        note_queue.push_list(note_list)
-        # TODO: delete file
-        system("mv test.mid test_.mid")
+        for i = 0 to len(filelist):
+            var filename = filelist[i]
+            var note_list = parse_smf(filename)
+            note_queue[i].push_list(note_list)
+            system("rm " + filename)
+        
+        check_queue_length()
         RNN_flag = 0
-        display note_queue.size()
-        if note_queue.size() < minimum_queue_size:
-            rtsched.cause(0, nil, 'request_RNN')
 
 # fit rhythem/style
 def fit_rhythem(measure):
@@ -285,18 +310,19 @@ def parse_smf(file):
 # res = parse_smf("test.mid")
 # for i = 0 to len(res):
 #     display i, res[i].pitch, res[i].duration
-notelist = parse_smf("test.mid")
-queue = Queue()
-queue.push_list(notelist)
-lastnotes = queue.last_n(10)
+# notelist = parse_smf("test.mid")
+# queue = Queue()
+# queue.push_list(notelist)
+# lastnotes = queue.last_n(10)
 
-while queue.size() > 0:
-    var note_ = queue.pop()
-    # display note_.pitch, note_.duration
+# while queue.size() > 0:
+#     var note_ = queue.pop()
+#     # display note_.pitch, note_.duration
 
-m = Measure(4,4)
-for i = 1 to 10:
-    m.add_note(lastnotes[i])
-get_command(2, 120, m)
+# m = Measure(4,4)
+# for i = 1 to 10:
+#     m.add_note(lastnotes[i])
+# get_command(2, 120, m)
 
+# display get_magenta_files()
 

@@ -11,8 +11,8 @@ joined = t  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
 
 # Globals for use by composition algorithms. 
-cur_scale = [0 for i = 0 to 12] // e.g. [true, false, true, false, ...]
-cur_scale[0] = 1
+cur_scale = [1 for i = 0 to 12] // e.g. [true, false, true, false, ...]
+
 cur_chord = [0 for i = 0 to 12] // similar
 cur_chord[0] = 1
 cur_chord[4] = 1
@@ -25,7 +25,7 @@ def demo_test():
     sched_init()
     vtsched.set_bps(2)
     rtsched.cause(0, nil, 'request_RNN', 0)
-    vtsched.cause(5, nil, 'fit_and_play', midi)
+    vtsched.cause(10, nil, 'fit_and_play', midi)
     sched_run()
 
 demo_test()

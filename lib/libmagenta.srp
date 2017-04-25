@@ -84,11 +84,16 @@ def last_measure():
                 notes_list[i].duration = default_rhythem[i - start]
                 measure.add_note(notes_list[i])
 
+    var notes = measure.notes.get_list()
+    
     # fit scale
-    measure.notes = fit_scale(measure.notes.get_list())
+    notes = fit_scale(notes)
 
     # fit chord
-    measure.notes = fit_chord(measure.notes.get_list())
+    notes = fit_chord(notes)
+
+    measure.notes = Queue()
+    measure.notes.push_list(notes)
 
     return measure
 

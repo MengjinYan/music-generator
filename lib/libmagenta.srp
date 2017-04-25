@@ -286,9 +286,10 @@ def fit_measure(note_queue):
 def fit_and_play(midi):
     display "fit_and_play", the_sched.time
     the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
-    var measure = fit_measure()
-    if measure is not nil:
-        measure.play(midi, 0)
+    for queue in note_queues:
+        var measure = fit_measure(queue)
+        if measure is not nil:
+            measure.play(midi, 0)
 
 
 def parse_smf(file):
@@ -328,3 +329,5 @@ def parse_smf(file):
 
 # display get_magenta_files()
 
+# get_command()
+# system("./magenta.sh")

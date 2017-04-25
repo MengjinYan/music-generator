@@ -72,7 +72,7 @@ def main():
     default_window.set_position(STAGE_WIDTH + 420, 25)
     midi = Midi(midi_out_default(), 100, 10)
     rtsched.start_use()
-    rtsched.cause(0, nil, 'request_RNN', [])
+    rtsched.cause(0, nil, 'request_RNN')
     rtsched.cause(0, nil, 'wait_for_clock_sync')
     rtsched.finish_use()
 

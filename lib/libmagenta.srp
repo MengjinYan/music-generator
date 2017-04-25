@@ -100,6 +100,7 @@ def last_measure():
 
 
 RNN_flag = 0
+RNN_style = ""
 def request_RNN(flag):
     display "request_RNN", the_sched.time, joined
     if RNN_flag == 0:
@@ -108,6 +109,7 @@ def request_RNN(flag):
             # TODO: construct request
             # TODO: need to assert if the queue is left more than 10 nodes        
             measure = last_measure()
+            RNN_style = cur_style
         else:
             measure = Measure(4, 4)
             measure.add_note(Note(60, 0.5))
@@ -342,7 +344,9 @@ def parse_smf(file):
         if smf_note.time > note_time:
             var last_idx = len(res) - 1
             res[last_idx].duration = res[last_idx].duration + (smf_note.time - note_time) / smf_tempo
-        res.append(Note(smf_note.key, smf_note.dur / smf_tempo))
+        var tmp_note = Note(smf_note.key, smf_note.dur / smf_tempo)
+        tmp_note.style = RNN_style
+        res.append(tmp_note)
         note_time = smf_note.time + smf_note.dur
     return res
 

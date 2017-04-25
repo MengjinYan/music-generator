@@ -63,7 +63,7 @@ def play_note(midi, note, volume):
     if note.pitch >= 0: # skip playing `rest`
         note.play(midi, volume)
         # schedule to stop this note
-        the_sched.cause(0.9 * note.duration, nil, 'stop_note', midi, note)
+        # the_sched.cause(0.9 * note.duration, nil, 'stop_note', midi, note)
 
 def stop_note(midi, note):
     note.stop(midi)

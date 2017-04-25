@@ -14,9 +14,9 @@ minimum_queue_size = 120
 # number of beats
 
 # 2nd and 4th down beat for the 3rd one
-rock_rhythem = [[0.5, 0.5, 0.75, 0.5, 0.5, 0.25, 0.5, 0.5], \
-                [1, 0.5, 1, 0.5, 0.5, 0.5], \
-                [0.5, 0.5, 0.5, 0.25, 0.25, 0.5, 0.5, 0.5, 0.25, 0.25], \
+rock_rhythem = [[0.5, 0.5, 0.75, 0.5, 0.5, 0.25, 0.5, 0.5], 
+                [1, 0.5, 1, 0.5, 0.5, 0.5], 
+                [0.5, 0.5, 0.5, 0.25, 0.25, 0.5, 0.5, 0.5, 0.25, 0.25], 
                 [1, 0.75, 0.25, 0.25, 0.25, 0.5, 0.5, 0.25, 0.25]]
 default_rhythem = [1, 0.5, 1, 0.5, 0.5, 0.5]
 
@@ -52,6 +52,22 @@ def get_command(num_outputs, num_steps, primer_melody):
     display retval
     return retval
 
+def last_measure():
+    var measure = Measure(cur_beats_per_measure, 4)
+    measure.style = cur_style
+
+    
+    # fit style/rhythem
+    measure = fit_rhythem(measure)
+
+    # fit scale
+    measure.notes = fit_scale(measure.notes)
+
+    # fit chord
+    measure.notes = fit_chord(measure.notes)
+
+
+
 RNN_flag = 0
 def request_RNN():
     if RNN_flag == 0:
@@ -59,6 +75,8 @@ def request_RNN():
         RNN_flag = 1
         # TODO: construct request
         
+        var measure = last_measure()
+
         # need to assert if the queue is left more than 10 nodes
         system("./a.sh &")
         rtsched.cause(fetching_period, nil, 'get_RNN')
@@ -91,14 +109,14 @@ def fit_rhythem(measure):
         measure.add_note(note)
         if note.duration > cur_beats_per_measure:
             note.duration = cur_beats_per_measure
-        total_beats += note.duration
+        total_beats = total_beats + note.duration
         
         while total_beats < measure:
             note = note_queue.pop()
             if note.duration > cur_beats_per_measure - total_beats:
                 note.duration = cur_beats_per_measure - total_beats
             measure.add_note(note)
-            total_beats += note.duration
+            total_beats = total_beats + note.duration
 
     # If the style is changed
     else:
@@ -126,8 +144,8 @@ def fit_scale(notes_list):
         var new_note_index = note_index
         while cur_scale[new_note_index] == 0:
             new_note_index = (new_note_index + 1) % 12
-        notes_list[i].pitch = notes_list[i].pitch \
-            + new_note_index - note_index
+        notes_list[i].pitch = notes_list[i].pitch +
+            new_note_index - note_index
 
     return notes_list
 
@@ -137,7 +155,7 @@ def fit_chord(notes_list):
     for note in notes_list:
         var note_index = notes_list[i].pitch % 12
         if cur_chord[note_index] == 1:
-            in_chord += 1
+            in_chord = in_chord + 1
 
     if real(in_chord) / real(len(notes_list)) >= 0.5:
         return notes_list
@@ -145,7 +163,7 @@ def fit_chord(notes_list):
         # fit chord
         var p = 0.5
         for note in notes_list:
-            var note_index = notes_list[i].pitch % 12
+            note_index = notes_list[i].pitch % 12
             if cur_chord[note_index] == 1:
                 p = 0.1
                 continue
@@ -154,8 +172,8 @@ def fit_chord(notes_list):
                     var new_note_index = note_index
                     while cur_chord[note_index] == 0:
                         new_note_index = (new_note_index + 1) % 12
-                    notes_list[i].pitch = notes_list[i].pitch \
-                        + new_note_index - note_index
+                    notes_list[i].pitch = notes_list[i].pitch + 
+                        new_note_index - note_index
 
     return notes_list
 

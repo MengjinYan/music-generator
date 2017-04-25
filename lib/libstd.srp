@@ -63,6 +63,11 @@ class Queue:
         else:
             return 0
 
+    def get_list():
+        var retval = _buf.reverse()
+        _buf.reverse()
+        return retval
+
 # # tests for class Queue
 # test_array = [2,1,4,3]
 # q = Queue()

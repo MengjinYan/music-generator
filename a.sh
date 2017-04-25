@@ -1,2 +1,3 @@
 sleep 4
-mv test_.mid test.mid
+cp test.mid ./output/test1.mid
+cp test.mid ./output/test2.mid

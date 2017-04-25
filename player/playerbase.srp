@@ -14,7 +14,8 @@ CONDUCTOR = "cond"
 
 current_bps = 1 // tempo currently in effect
 base_beat_time = 0 // time of the starting beat
-current_beats_per_measure = 4
+cur_beats_per_measure = 4
+cur_style = "rock"
 
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
@@ -72,11 +73,11 @@ def main():
     default_window.set_position(STAGE_WIDTH + 420, 25)
     midi = Midi(midi_out_default(), 100, 10)
     rtsched.start_use()
-    rtsched.cause(0, nil, 'request_RNN')
+    rtsched.cause(0, nil, 'request_RNN', 0)
     rtsched.cause(0, nil, 'wait_for_clock_sync')
     rtsched.finish_use()
 
-    vtsched.cause(0, nil, 'fit_and_play', midi)
+    vtsched.cause(10, nil, 'fit_and_play', midi)
 
 
 def player_init():

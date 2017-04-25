@@ -8,7 +8,7 @@ require "mfread"
 # in unit of beat
 fetching_period = 0.5
 note_queues = [Queue(), Queue()]
-minimum_queue_size = 120
+minimum_queue_size = 40
 
 # Rhythem patterns
 # number of beats
@@ -85,25 +85,33 @@ def last_measure():
                 measure.add_note(notes_list[i])
 
     # fit scale
-    measure.notes = fit_scale(measure.notes)
+    measure.notes = fit_scale(measure.notes.get_list())
 
     # fit chord
-    measure.notes = fit_chord(measure.notes)
+    measure.notes = fit_chord(measure.notes.get_list())
 
     return measure
 
 
 RNN_flag = 0
-def request_RNN():
+def request_RNN(flag):
     if RNN_flag == 0:
-        display "request_RNN", the_sched.time
+        var measure
+        if flag == 1:
+            display "request_RNN", the_sched.time
+            # TODO: construct request
+            # TODO: need to assert if the queue is left more than 10 nodes        
+            measure = last_measure()
+        else:
+            measure = Measure(4, 4)
+            measure.add_note(Note(60, 0.5))
+
         RNN_flag = 1
-        # TODO: construct request
-        # TODO: need to assert if the queue is left more than 10 nodes        
-        var measure = last_measure()
         get_command(2, 120, measure)
-        system("./magenta.sh &")
+        # system("./magenta.sh &")
+        system("./a.sh &")
         rtsched.cause(fetching_period, nil, 'get_RNN')
+
     return
 
 def get_magenta_files():
@@ -114,7 +122,7 @@ def get_magenta_files():
     var retval = []
     for i = 0 to len(dirlist):
         if subseq(dirlist[i], -4) == ".mid":
-            retval.append(dirlist[i])
+            retval.append("./output/" + dirlist[i])
     if len(retval) == 2:
         return retval
     else:
@@ -127,23 +135,22 @@ def check_queue_length():
             flag = 1
 
     if flag == 1:
-        rtsched.cause(0, nil, 'request_RNN')
+        rtsched.cause(0, nil, 'request_RNN', 1)
 
 
 
 def get_RNN():
     display "get_RNN", the_sched.time
     # check if filesystem has midi file and read file
-    var f = open("test.mid", "r")
-
     var filelist = get_magenta_files()
+    display filelist
     if filelist is nil:
         rtsched.cause(fetching_period, nil, 'get_RNN')
     else:
         for i = 0 to len(filelist):
             var filename = filelist[i]
             var note_list = parse_smf(filename)
-            note_queue[i].push_list(note_list)
+            note_queues[i].push_list(note_list)
             system("rm " + filename)
         
         check_queue_length()
@@ -267,10 +274,10 @@ def fit_measure(note_queue):
     measure = fit_rhythem(measure, note_queue)
 
     # fit scale
-    measure.notes = fit_scale(measure.notes)
+    measure.notes = fit_scale(measure.notes.get_list())
 
     # fit chord
-    measure.notes = fit_chord(measure.notes)
+    measure.notes = fit_chord(measure.notes.get_list())
 
     # if note_queue.size() < 4:
     #     return nil
@@ -284,10 +291,14 @@ def fit_measure(note_queue):
     return measure
 
 def fit_and_play(midi):
+
     display "fit_and_play", the_sched.time
     the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
+    if joined == false:
+        return
     for queue in note_queues:
         var measure = fit_measure(queue)
+        display measure
         if measure is not nil:
             measure.play(midi, 0)
 

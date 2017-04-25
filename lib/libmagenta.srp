@@ -158,6 +158,7 @@ def get_RNN():
 
 # fit rhythem/style
 def fit_rhythem(measure, note_queue):
+    display "fit_rhythem"
     var total_beats = 0
     var note = note_queue.pop()
 
@@ -208,6 +209,8 @@ def fit_rhythem(measure, note_queue):
 
 
 def fit_scale(notes_list):
+    display "fit_scale"
+    # TODO: !!!infinite loop here!!!
     for i = 0 to len(notes_list):
         var note_index = notes_list[i].pitch % 12
         var new_note_index = note_index
@@ -219,6 +222,7 @@ def fit_scale(notes_list):
     return notes_list
 
 def fit_chord(notes_list):
+    display "fit_chord"
     # Check if the measure fit
     var in_chord = 0
     for note in notes_list:
@@ -298,7 +302,6 @@ def fit_and_play(midi):
         return
     for queue in note_queues:
         var measure = fit_measure(queue)
-        display measure
         if measure is not nil:
             measure.play(midi, 0)
 

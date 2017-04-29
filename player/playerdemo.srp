@@ -4,7 +4,7 @@
 # March 2017
 
 # IMPORTANT: SERVICE must be defined before you load playerbase.srp:
-SERVICE = "demo"
+SERVICE = "magenta"
 
 # Now load playerbase.srp
 require "playerbase"

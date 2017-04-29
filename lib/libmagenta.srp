@@ -60,13 +60,14 @@ def last_measure():
 
     # fit style/rhythem
     var notes_list = note_queues[0].last_n(NUM_LAST_NOTES)
-    if notes_list[0].style == cur_style:
+    if nil: # notes_list[0].style == cur_style:
         var total_beats = 0
         for note in notes_list:
             total_beats = total_beats + note.duration
-        measre.length(total_beats)
+        measure.length = total_beats
+        measure.notes.push_list(notes_list)
     else:
-        if cur_style == "rock":
+        if cur_style == 'rock':
             # choose a random rhythem
             var rhythem_num = int(4*random())
             var rhythem_len = len(rock_rhythem[rhythem_num])
@@ -74,6 +75,7 @@ def last_measure():
             
             for i = start to NUM_LAST_NOTES:
                 notes_list[i].duration = rock_rhythem[rhythem_num][i - start]
+                notes_list[i].style = cur_style
                 measure.add_note(notes_list[i])
 
         else:
@@ -83,6 +85,7 @@ def last_measure():
             
             for i = start to NUM_LAST_NOTES:
                 notes_list[i].duration = default_rhythem[i - start]
+                notes_list[i].style = cur_style
                 measure.add_note(notes_list[i])
 
     var notes = measure.notes.get_list()
@@ -105,7 +108,7 @@ def request_RNN(flag):
     display "request_RNN", the_sched.time, joined
     if RNN_flag == 0:
         var measure
-        if joined == 1:
+        if flag == 1:
             # TODO: construct request
             # TODO: need to assert if the queue is left more than 10 nodes        
             measure = last_measure()
@@ -172,22 +175,24 @@ def fit_rhythem(measure, note_queue):
     var note = note_queue.pop()
 
     # If the style is not changed
-    if 0: # note.style == cur_style:
-        measure.add_note(note)
+    if nil: # note.style == cur_style:
+        display "style not change"
         if note.duration > cur_beats_per_measure:
             note.duration = cur_beats_per_measure
         total_beats = total_beats + note.duration
+        measure.add_note(note)
         
         while total_beats < cur_beats_per_measure:
             note = note_queue.pop()
             if note.duration > cur_beats_per_measure - total_beats:
                 note.duration = cur_beats_per_measure - total_beats
+            note.style = cur_style
             measure.add_note(note)
             total_beats = total_beats + note.duration
 
     # If the style is changed
     else:
-        if cur_style == "rock":
+        if cur_style == 'rock':
             # choose a random rhythem
             total_beats = 0
             var rhythem_num = int(4*random())
@@ -212,6 +217,7 @@ def fit_rhythem(measure, note_queue):
                     else:
                         note.duration = i
                     total_beats = total_beats + note.duration
+                    note.style = cur_style
                     measure.add_note(note)
 
     return measure
@@ -224,7 +230,7 @@ def fit_scale(notes_list):
         var note_index = notes_list[i].pitch % 12
         var new_note_index = note_index
         var j = 0
-        while (cur_scale[new_note_index] == 0) and (j < 12):
+        while (cur_scale[new_note_index] == nil) and (j < 12):
             new_note_index = (new_note_index + 1) % 12
             j = j + 1
         notes_list[i].pitch = notes_list[i].pitch +
@@ -241,7 +247,7 @@ def fit_chord(notes_list):
     var in_chord = 0
     for note in notes_list:
         var note_index = note.pitch % 12
-        if cur_chord[note_index] == 1:
+        if cur_chord[note_index] == t:
             in_chord = in_chord + 1
     display "1"
     if real(in_chord) / real(len(notes_list)) >= 0.5:
@@ -251,13 +257,17 @@ def fit_chord(notes_list):
         var p = 0.5
         for i = 0 to len(notes_list):
             note_index = notes_list[i].pitch % 12
-            if cur_chord[note_index] == 1:
+            if cur_chord[note_index] == t:
                 p = 0.1
             else:
+                if i > 0:
+                    if abs(notes_list[i-1].pitch - notes_list[i].pitch) > 4:
+                        p = 0.7
+
                 if random() < p:
                     var new_note_index = note_index
                     var j = 0
-                    while (cur_chord[new_note_index] == 0) and (j < 12):
+                    while (cur_chord[new_note_index] == nil) and (j < 12):
                         new_note_index = (new_note_index + 1) % 12
                         j = j + 1
                     notes_list[i].pitch = notes_list[i].pitch + 
@@ -329,6 +339,9 @@ def fit_and_play(midi):
         var measure = fit_measure(queue)
         if measure is not nil:
             measure.play(midi, 0)
+    # var measure = fit_measure(note_queues[0])
+    # if measure is not nil:
+    #     measure.play(midi, 0)
 
 
 def parse_smf(file):

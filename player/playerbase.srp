@@ -6,6 +6,7 @@
 require "../cond/stage" // lots of shared code here with server
 require "player_panel"
 require "../cond/chat"
+require "http"
 require "libmagenta"
 
 APPLICATION = "cmsip"
@@ -14,8 +15,9 @@ CONDUCTOR = "cond"
 
 current_bps = 1 // tempo currently in effect
 base_beat_time = 0 // time of the starting beat
+# current_beats_per_measure = 4
 cur_beats_per_measure = 4
-cur_style = "rock"
+cur_style = 'rock'
 
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
@@ -37,7 +39,8 @@ def wait_for_clock_sync()
 
 
 def player_has_clock_sync()
-    // conductor exists and we haave clock sync with it. Time to join
+    // conductor exists and we have clock sync with it. Time to join
+    display "player_has_clock_sync"
     o2_send_start()
     o2_add_string(SERVICE) // send our name
     o2_send_finish(0.0, "/cond/join", TCP)
@@ -61,6 +64,11 @@ def main():
     initialize_midi(SERVICE)
     o2_initialize(APPLICATION, false)
     o2_service_new(SERVICE)
+    if wxs_message_box("Do you want to ask the server for the conductor?",
+                       "Hub or Discovery", WXS_STYLE_YES_NO, 0) ==
+       WXS_MSG_YES
+        find_o2_hub_from_server()
+
     poll_function = 'o2_poll_fn'
     sched_time_get = 'o2_time_get'
     stage = Stage(0, 0, 0, STAGE_WIDTH, idiv(STAGE_WIDTH, 2), SERVICE)
@@ -69,18 +77,38 @@ def main():
     display_panel = player // see stage.srp, display_panel.flash_downbeat()
     chat = Chat(0, 5, 485, STAGE_WIDTH, 260)
     default_window.set_size(STAGE_WIDTH + 15, 750)
+    midi_ = Midi(midi_out_default(), 100, 10)
     // position to the right of conductor (whether or not it is open)
     default_window.set_position(STAGE_WIDTH + 420, 25)
-    midi_ = Midi(midi_out_default(), 100, 10)
     rtsched.start_use()
     rtsched.cause(0, nil, 'request_RNN', 0)
     rtsched.cause(0, nil, 'wait_for_clock_sync')
     rtsched.finish_use()
+    
 
-    # vtsched.cause(10, nil, 'fit_and_play', midi_)
+def find_o2_hub_from_server()
+    req = Http_request()
+    req.get("http://www.music.cs.cmu.edu/cgi-bin/o2hub/get.py")
+    while req.state != 'fail' and req.state != 'done'
+        time_sleep(0.1)
+        req.poll()
+    if req.state == 'fail':
+        display "Failed finding o2_hub", req.error
+        return
+    print "find_o2_hub_from_server got "; req.data
+    var loc1 = find(req.data, "Hub: ")
+    var loc2 = find(req.data, ":", loc1 + 5)
+    var loc3 = find(req.data, "<", loc2)
+    if loc3 < 0 
+        display "Failed finding o2_hub", req.error
+        return
+    var ip = subseq(req.data, loc1 + 5, loc2)
+    var port = subseq(req.data, loc2 + 1, loc3)
+    display "o2_hub", ip, port
+    o2_hub(ip, int(port))
 
 
-def player_init():
+def player_init()
     // IMPORTANT: no handlers until clock sync; otherwise, we'll get
     // messages before we've established vtsched, and vtsched.start_use()
     // will fail!
@@ -95,11 +123,11 @@ def player_init():
 
 
     
-def set_stage_position():
+def set_stage_position()
     send_stage_position()
 
 
-def send_stage_position():
+def send_stage_position()
     var p = stage.perf
     if p.x and p.y and joined
         o2_send_start()
@@ -109,7 +137,7 @@ def send_stage_position():
         o2_send_finish(0.0, "/cond/posn", TCP)
 
 
-def tempo_set(base, bps, bpmeas):
+def tempo_set(base, bps, bpmeas)
     cur_base_beat_number = base
     cur_bps = bps
     cur_beats_per_measure = bpmeas
@@ -118,7 +146,7 @@ def tempo_set(base, bps, bpmeas):
 
 
 // called on vtsched
-def tempo_change(rt, bps, beat):
+def tempo_change(rt, bps, beat)
     display "tempo_change", rt, bps, beat
     if not within(rtsched.time, rt, 0.001)
         display "WARNING: tempo_change anomaly", rtsched.time, rt
@@ -136,7 +164,7 @@ cur_scale = [0 for i = 0 to 12] // e.g. [true, false, true, false, ...]
 cur_chord = [0 for i = 0 to 12] // similar
 cur_bass = 0 // C initially     // integer pitch class from 0 thru 11
 
-def harmony_change(scale, chord, bass):
+def harmony_change(scale, chord, bass)
     display "harmony_change", scale, chord, bass
     # set some globals for composition algorithms
     for b at i in scale
@@ -148,7 +176,7 @@ def harmony_change(scale, chord, bass):
     player.update_chord_to(chord, "now")
     player.update_scale_to(scale, "now")
 
-def style_change(style):
+def style_change(style)
     display "style_change", style
     cur_style = style
     stage.style = style
@@ -168,7 +196,7 @@ def posn_handler(timestamp, address, types, name, x, y):
     stage.refresh(t)
 
 
-def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat):
+def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat)
     display "timemap_handler", address, when, bpmeas, bps, beat
     player.update_bpm_to(round(bps * 60), "next")
     player.update_beat_to(bpmeas, "next")
@@ -200,7 +228,7 @@ def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat):
     vtsched.finish_use()
 
 
-def harmony_handler(timestamp, address, types, beat, scale, chord, bass):
+def harmony_handler(timestamp, address, types, beat, scale, chord, bass)
     display "harmony_handler", beat, scale, chord, bass
     player.update_scale_to(scale, "next")
     player.update_chord_to(chord, "next")
@@ -211,7 +239,7 @@ def harmony_handler(timestamp, address, types, beat, scale, chord, bass):
     vtsched.finish_use()
 
 
-def style_handler(timestamp, address, types, beat, style):
+def style_handler(timestamp, address, types, beat, style)
     display "style_handler", beat, style
     player.update_style_to(style, "next")
     vtsched.start_use()
@@ -219,14 +247,14 @@ def style_handler(timestamp, address, types, beat, style):
     vtsched.finish_use()
 
 
-def start_handler(timestamp, address, types, beat):
+def start_handler(timestamp, address, types, beat)
     display "start_handler", beat
     cur_start_beat = beat
     cur_stop_beat = 999999
     play_next.set_string("YES")
 
 
-def stop_handler(timestamp, address, types, beat):
+def stop_handler(timestamp, address, types, beat)
     display "stop_handler", beat
     cur_stop_beat = beat
     play_next.set_string("NO")
@@ -261,7 +289,8 @@ def send_message(msg):
             o2_add_string(msg)
             o2_send_finish(0.0, address, TCP)
 
-def o2_poll_fn():
+def o2_poll_fn()
     o2_poll()
 
 
+main()

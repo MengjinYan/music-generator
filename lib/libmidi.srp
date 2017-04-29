@@ -105,7 +105,8 @@ class Measure:
     def play(midi, vt_offset_, volume):
         display "play measure", vt_offset_, the_sched.time
         # TODO: change program
-        # midi_out.program(0, program, lsb, msb)
+        var program = PROGRAM_LIST[instrument - 1]
+        midi_out.program(0, program.number, program.lsb, program.msb)
         var vt_time = vt_offset_
         while notes.empty() == 0:
             var note = notes.pop()

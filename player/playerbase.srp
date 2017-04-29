@@ -24,7 +24,7 @@ cur_style = 'rock'
 volume1 = 1.0
 volume2 = 1.0
 instrument = 1 # from 1 to 12
-octave = 0 # 0 to 1 float
+octave = 0.5 # 0 to 1 float
 
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
@@ -366,7 +366,7 @@ def volume2_handler(timestamp, address, types, val):
 
 def octave_handler(timestamp, address, types, val):
     display "scale", address, types, val, timestamp
-    scale = val
+    octave = val
 
 def push1_handler(timestamp, address, types, val):
     display "push1", address, types, val, timestamp

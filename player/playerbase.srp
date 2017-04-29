@@ -12,6 +12,8 @@ require "libmagenta"
 APPLICATION = "cmsip"
 PITCH = 64
 CONDUCTOR = "cond"
+PROGRAM_LIST = []
+PROGRAM_NUM = 12
 
 current_bps = 1 // tempo currently in effect
 base_beat_time = 0 // time of the starting beat
@@ -21,8 +23,8 @@ cur_style = 'rock'
 
 volume1 = 1.0
 volume2 = 1.0
-instrument = 1
-octave = 0
+instrument = 1 # from 1 to 12
+octave = 0 # 0 to 1 float
 
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
@@ -131,6 +133,35 @@ def player_init():
     // IMPORTANT: no handlers until clock sync; otherwise, we'll get
     // messages before we've established vtsched, and vtsched.start_use()
     // will fail!
+    # Initialize program list
+    for i = 0 to PROGRAM_NUM:
+        if i == 0: // Melody Instrument: Piano
+            program = Program(1, 1, 121, 0, [23, 110])
+        elif i == 1: // Melody Instrument: Ice Rain
+            program = Program(2, 97, 121, 0, [35, 84])
+        elif i == 2: // Melody Instrument: Vibraphone
+            program = Program(3, 12, 121, 0, [23, 105])
+        elif i == 3: // Melody Instrument: Strings
+            program = Program(4, 49, 121, 0, [35, 83])
+        elif i == 4: // Melody Instrument: Doctor Solo
+            program = Program(5, 82, 121, 8, [35, 83])
+        elif i == 5: // Meloday Instrument: Kalimba
+            program = Program(6, 109, 121, 0, [35, 96])
+        elif i == 6: // Percussion Instrument: Jazz
+            program = Program(7, 33, 120, 0, [27, 87])
+        elif i == 7: // Percussion Instrument: Electronic
+            program = Program(8, 25, 120, 0, [27, 87])
+        elif i == 8: // Percussion Instrument: Orchestra
+            program = Program(9, 49, 120, 0, [27, 88])
+        elif i == 9: // Percussion Instrument: Gun shot
+            program = Program(10, 128, 121, 0, [20, 60])
+        elif i == 10: // Percussion Instrument: Door
+            program = Program(11, 125, 121, 3, [20, 70])
+        else: // Percussion Instrument: Telephone 1
+            program = Program(12, 125, 121, 0, [20, 80])
+
+        PROGRAM_LIST.append(program)
+
     o2_method_new(with_service("/posn"), "sff", 'posn_handler', true)
     o2_method_new(with_service("/timemap"), "didi", 'timemap_handler', true)
     o2_method_new(with_service("/harmony"), "issi", 'harmony_handler', true)
@@ -156,7 +187,6 @@ def player_init():
     o2_method_new(with_osc_service("/1/push12"), "f", 'push12_handler', true)
 
     player_has_clock_sync()
-
 
     
 def set_stage_position():

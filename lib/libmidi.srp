@@ -46,8 +46,9 @@ class Note:
     def init(pitch_, duration_):
         pitch = pitch_
         duration = duration_
-        _channel = 1
-        velocity = 110
+        _channel = 0
+        velocity = 127
+
 
     def play(midi, volume):
         midi_out.note(_channel, pitch, volume, duration)
@@ -86,17 +87,19 @@ class Measure:
         notes.push(note)
 
 # TODO: can the final note stay on to the next measure?
-    def play(midi, vt_offset_):
+    def play(midi, vt_offset_, volume):
         display "play measure", vt_offset_, the_sched.time
+        # TODO: change program
+        # midi_out.program(0, program, lsb, msb)
         var vt_time = vt_offset_
         while notes.empty() == 0:
             var note = notes.pop()
             display "dispatch note", note.pitch, note.duration
-            the_sched.cause(vt_time, nil, 'play_note', midi, note, note.velocity) # TODO: change volume due to control and measure
+            the_sched.cause(vt_time, nil, 'play_note', midi, note, int(volume * note.velocity)) # TODO: change volume due to control and measure
             vt_time = vt_time + note.duration
 
-def play_measure(midi, measure, vt_offset):
-    measure.play(midi, vt_offset)
+# def play_measure(midi, measure, vt_offset):
+#     measure.play(midi, vt_offset)
 
 ################ TESTS ################
 

@@ -335,10 +335,15 @@ def fit_and_play(midi):
     # the_sched.cause(cur_beats_per_measure, nil, 'fit_and_play', midi)
     if joined == false:
         return
-    for queue in note_queues:
+    for i = 0 to len(note_queues):
+        var queue = note_queues[i]
         var measure = fit_measure(queue)
         if measure is not nil:
-            measure.play(midi, 0)
+            if i == 0:
+                measure.play(midi, 0, volume1)
+            if i == 1:
+                measure.play(midi, 0, volume2)
+                
     # var measure = fit_measure(note_queues[0])
     # if measure is not nil:
     #     measure.play(midi, 0)

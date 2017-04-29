@@ -28,4 +28,15 @@ def demo_test():
     vtsched.cause(10, nil, 'fit_and_play', midi)
     sched_run()
 
-demo_test()
+# demo_test()
+
+def scale_test():
+	sched_init()
+	vtsched.set_bps(0.5)
+
+	for pitch = 0 to 127:
+		var note = Note(127, 1)
+		vtsched(pitch, nil, 'play_note', nil, note, 1)
+
+scale_test()
+

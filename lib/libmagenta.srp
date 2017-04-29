@@ -280,7 +280,7 @@ def fit_chord(notes_list):
     display "fit_chord, done"
     return notes_list
 
-def fid_bound(notes_list):
+def fit_bound(notes_list):
     program_idx = instrument - 1
     if octave > 0.7:
         program_high_bound = PROGRAM_LIST[program_idx].scale[1]
@@ -298,6 +298,7 @@ def fid_bound(notes_list):
         while notes_list[i].pitch < program_low_bound:
             notes_list[i].pitch = notes_list[i].pitch + 12
 
+    return notes_list
 
 def fit_measure(note_queue):
     display "fit_measure", the_sched.time

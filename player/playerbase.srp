@@ -22,7 +22,7 @@ cur_style = 'rock'
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
 
-def heartbeat()
+def heartbeat():
     // display "heartbeat", o2_time_get(), vtsched.time, rtsched.time
     o2_send_start()
     o2_add_string(SERVICE)
@@ -30,7 +30,7 @@ def heartbeat()
     rtsched.cause(1.0, nil, 'heartbeat')
 
 
-def wait_for_clock_sync()
+def wait_for_clock_sync():
     display "wait_for_clock_sync", time_get()
     if o2_status(CONDUCTOR) > O2_LOCAL:
         player_init()
@@ -38,7 +38,7 @@ def wait_for_clock_sync()
         rtsched.cause(0.1, nil, 'wait_for_clock_sync')
 
 
-def player_has_clock_sync()
+def player_has_clock_sync():
     // conductor exists and we have clock sync with it. Time to join
     display "player_has_clock_sync"
     o2_send_start()
@@ -52,7 +52,7 @@ def player_has_clock_sync()
     rtsched.finish_use()
 
 
-def with_service(addr)
+def with_service(addr):
     "!" + SERVICE + addr
 
 def main():
@@ -86,7 +86,7 @@ def main():
     rtsched.finish_use()
     
 
-def find_o2_hub_from_server()
+def find_o2_hub_from_server():
     req = Http_request()
     req.get("http://www.music.cs.cmu.edu/cgi-bin/o2hub/get.py")
     while req.state != 'fail' and req.state != 'done'
@@ -108,7 +108,7 @@ def find_o2_hub_from_server()
     o2_hub(ip, int(port))
 
 
-def player_init()
+def player_init():
     // IMPORTANT: no handlers until clock sync; otherwise, we'll get
     // messages before we've established vtsched, and vtsched.start_use()
     // will fail!
@@ -123,11 +123,11 @@ def player_init()
 
 
     
-def set_stage_position()
+def set_stage_position():
     send_stage_position()
 
 
-def send_stage_position()
+def send_stage_position():
     var p = stage.perf
     if p.x and p.y and joined
         o2_send_start()
@@ -137,7 +137,7 @@ def send_stage_position()
         o2_send_finish(0.0, "/cond/posn", TCP)
 
 
-def tempo_set(base, bps, bpmeas)
+def tempo_set(base, bps, bpmeas):
     cur_base_beat_number = base
     cur_bps = bps
     cur_beats_per_measure = bpmeas
@@ -146,7 +146,7 @@ def tempo_set(base, bps, bpmeas)
 
 
 // called on vtsched
-def tempo_change(rt, bps, beat)
+def tempo_change(rt, bps, beat):
     display "tempo_change", rt, bps, beat
     if not within(rtsched.time, rt, 0.001)
         display "WARNING: tempo_change anomaly", rtsched.time, rt
@@ -164,7 +164,7 @@ cur_scale = [0 for i = 0 to 12] // e.g. [true, false, true, false, ...]
 cur_chord = [0 for i = 0 to 12] // similar
 cur_bass = 0 // C initially     // integer pitch class from 0 thru 11
 
-def harmony_change(scale, chord, bass)
+def harmony_change(scale, chord, bass):
     display "harmony_change", scale, chord, bass
     # set some globals for composition algorithms
     for b at i in scale
@@ -176,7 +176,7 @@ def harmony_change(scale, chord, bass)
     player.update_chord_to(chord, "now")
     player.update_scale_to(scale, "now")
 
-def style_change(style)
+def style_change(style):
     display "style_change", style
     cur_style = style
     stage.style = style
@@ -196,7 +196,7 @@ def posn_handler(timestamp, address, types, name, x, y):
     stage.refresh(t)
 
 
-def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat)
+def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat):
     display "timemap_handler", address, when, bpmeas, bps, beat
     player.update_bpm_to(round(bps * 60), "next")
     player.update_beat_to(bpmeas, "next")
@@ -228,7 +228,7 @@ def timemap_handler(timestamp, address, types, when, bpmeas, bps, beat)
     vtsched.finish_use()
 
 
-def harmony_handler(timestamp, address, types, beat, scale, chord, bass)
+def harmony_handler(timestamp, address, types, beat, scale, chord, bass):
     display "harmony_handler", beat, scale, chord, bass
     player.update_scale_to(scale, "next")
     player.update_chord_to(chord, "next")
@@ -239,7 +239,7 @@ def harmony_handler(timestamp, address, types, beat, scale, chord, bass)
     vtsched.finish_use()
 
 
-def style_handler(timestamp, address, types, beat, style)
+def style_handler(timestamp, address, types, beat, style):
     display "style_handler", beat, style
     player.update_style_to(style, "next")
     vtsched.start_use()
@@ -247,14 +247,14 @@ def style_handler(timestamp, address, types, beat, style)
     vtsched.finish_use()
 
 
-def start_handler(timestamp, address, types, beat)
+def start_handler(timestamp, address, types, beat):
     display "start_handler", beat
     cur_start_beat = beat
     cur_stop_beat = 999999
     play_next.set_string("YES")
 
 
-def stop_handler(timestamp, address, types, beat)
+def stop_handler(timestamp, address, types, beat):
     display "stop_handler", beat
     cur_stop_beat = beat
     play_next.set_string("NO")
@@ -289,7 +289,7 @@ def send_message(msg):
             o2_add_string(msg)
             o2_send_finish(0.0, address, TCP)
 
-def o2_poll_fn()
+def o2_poll_fn():
     o2_poll()
 
 

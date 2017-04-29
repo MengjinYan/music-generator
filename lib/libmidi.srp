@@ -65,8 +65,11 @@ class Note:
         velocity = 127
 
 
-    def play(midi, volume):
-        midi_out.note(_channel, pitch, volume, duration)
+    def play(midi, channel):
+        if channel == 0:
+            midi_out.note(_channel, pitch, int(volume1 * velocity), duration)
+        if channel == 1:
+            midi_out.note(_channel, pitch, int(volume2 * velocity), duration)
 
     def play_offset(midi, pitch_offset, volume):
         midi.note_on(_channel, pitch + pitch_offset, volume)
@@ -74,10 +77,10 @@ class Note:
     def stop(midi):
         midi.note_off(_channel, pitch)
 
-def play_note(midi, note, volume):
+def play_note(midi, note, channel):
     display "play_note", note.pitch, note.duration, the_sched.time
     if note.pitch >= 0: # skip playing `rest`
-        note.play(midi, volume)
+        note.play(midi, channel)
         # schedule to stop this note
         # the_sched.cause(0.9 * note.duration, nil, 'stop_note', midi, note)
 
@@ -102,7 +105,7 @@ class Measure:
         notes.push(note)
 
 # TODO: can the final note stay on to the next measure?
-    def play(midi, vt_offset_, volume):
+    def play(midi, vt_offset_, channel):
         display "play measure", vt_offset_, the_sched.time
         # TODO: change program
         var program = PROGRAM_LIST[instrument - 1]
@@ -111,7 +114,7 @@ class Measure:
         while notes.empty() == 0:
             var note = notes.pop()
             display "dispatch note", note.pitch, note.duration
-            the_sched.cause(vt_time, nil, 'play_note', midi, note, int(volume * note.velocity)) # TODO: change volume due to control and measure
+            the_sched.cause(vt_time, nil, 'play_note', midi, note, channel) # TODO: change volume due to control and measure
             vt_time = vt_time + note.duration
 
 # def play_measure(midi, measure, vt_offset):

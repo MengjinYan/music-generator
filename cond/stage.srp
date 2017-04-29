@@ -115,7 +115,7 @@ class Stage (Canvas)
                 if play_now // conductor does not have a play_now Statictext
                     play_now.set_string("YES")
                 if style != 'sync' and player_enabled
-                    # play_a_measure() // implemented in player only
+                    # TODO: uncomment
                     fit_and_play(midi_)
                     if display_panel
                         display_panel.flash_downbeat()

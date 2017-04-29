@@ -19,6 +19,11 @@ base_beat_time = 0 // time of the starting beat
 cur_beats_per_measure = 4
 cur_style = 'rock'
 
+volume1 = 1.0
+volume2 = 1.0
+instrument = 1
+octave = 0
+
 joined = false  // have we joined the orchestra yet?
 have_timemap = false // set when timemap is first called
 
@@ -55,6 +60,11 @@ def player_has_clock_sync():
 def with_service(addr):
     "!" + SERVICE + addr
 
+def with_osc_service(addr):
+    return "/" + OSC_SERVICE + addr
+
+OSC_PORT = 8001
+OSC_SERVICE = "p5_osc"
 def main():
     if len(command_line_arguments) > 1
         SERVICE = command_line_arguments[1]
@@ -64,6 +74,14 @@ def main():
     initialize_midi(SERVICE)
     o2_initialize(APPLICATION, false)
     o2_service_new(SERVICE)
+    o2_service_new(OSC_SERVICE)
+    o2_clock_set()
+    rslt = o2_osc_port_new(OSC_SERVICE, OSC_PORT, false)
+    if rslt != 0: // an error occurred
+        display "in osc monitor, o2_osc_port_new returned ERROR", rslt
+    else:
+        print "Listening for TouchOSC messages on port", OSC_PORT
+
     if wxs_message_box("Do you want to ask the server for the conductor?",
                        "Hub or Discovery", WXS_STYLE_YES_NO, 0) ==
        WXS_MSG_YES
@@ -81,6 +99,7 @@ def main():
     // position to the right of conductor (whether or not it is open)
     default_window.set_position(STAGE_WIDTH + 420, 25)
     rtsched.start_use()
+    # TODO: uncomment
     rtsched.cause(0, nil, 'request_RNN', 0)
     rtsched.cause(0, nil, 'wait_for_clock_sync')
     rtsched.finish_use()
@@ -119,6 +138,23 @@ def player_init():
     o2_method_new(with_service("/start"), "i", 'start_handler', true)
     o2_method_new(with_service("/stop"), "i", 'stop_handler', true)
     o2_method_new(with_service("/chat"), "ss", 'chat_handler', true)
+
+    o2_method_new(with_osc_service("/1/fader1"), "f", 'volume1_handler', true)
+    o2_method_new(with_osc_service("/1/fader2"), "f", 'volume2_handler', true)
+    o2_method_new(with_osc_service("/1/fader3"), "f", 'octave_handler', true)
+    o2_method_new(with_osc_service("/1/push1"), "f", 'push1_handler', true)
+    o2_method_new(with_osc_service("/1/push2"), "f", 'push2_handler', true)
+    o2_method_new(with_osc_service("/1/push3"), "f", 'push3_handler', true)
+    o2_method_new(with_osc_service("/1/push4"), "f", 'push4_handler', true)
+    o2_method_new(with_osc_service("/1/push5"), "f", 'push5_handler', true)
+    o2_method_new(with_osc_service("/1/push6"), "f", 'push6_handler', true)
+    o2_method_new(with_osc_service("/1/push7"), "f", 'push7_handler', true)
+    o2_method_new(with_osc_service("/1/push8"), "f", 'push8_handler', true)
+    o2_method_new(with_osc_service("/1/push9"), "f", 'push9_handler', true)
+    o2_method_new(with_osc_service("/1/push10"), "f", 'push10_handler', true)
+    o2_method_new(with_osc_service("/1/push11"), "f", 'push11_handler', true)
+    o2_method_new(with_osc_service("/1/push12"), "f", 'push12_handler', true)
+
     player_has_clock_sync()
 
 
@@ -288,6 +324,69 @@ def send_message(msg):
             o2_add_string(SERVICE)
             o2_add_string(msg)
             o2_send_finish(0.0, address, TCP)
+
+###########TOUCH OSC##############
+def volume1_handler(timestamp, address, types, val):
+    display "volume1", address, types, val, timestamp
+    volume1 = val
+
+def volume2_handler(timestamp, address, types, val):
+    display "volume2", address, types, val, timestamp
+    volume2 = val
+
+def octave_handler(timestamp, address, types, val):
+    display "scale", address, types, val, timestamp
+    scale = val
+
+def push1_handler(timestamp, address, types, val):
+    display "push1", address, types, val, timestamp
+    instrument = 1
+
+def push2_handler(timestamp, address, types, val):
+    display "push2", address, types, val, timestamp
+    instrument = 2
+
+def push3_handler(timestamp, address, types, val):
+    display "push3", address, types, val, timestamp
+    instrument = 3
+
+def push4_handler(timestamp, address, types, val):
+    display "push4", address, types, val, timestamp
+    instrument = 4
+
+def push5_handler(timestamp, address, types, val):
+    display "push5", address, types, val, timestamp
+    instrument = 5
+
+def push6_handler(timestamp, address, types, val):
+    display "push6", address, types, val, timestamp
+    instrument = 6
+
+def push7_handler(timestamp, address, types, val):
+    display "push7", address, types, val, timestamp
+    instrument = 7
+
+def push8_handler(timestamp, address, types, val):
+    display "push8", address, types, val, timestamp
+    instrument = 8
+
+def push9_handler(timestamp, address, types, val):
+    display "push9", address, types, val, timestamp
+    instrument = 9
+
+def push10_handler(timestamp, address, types, val):
+    display "push10", address, types, val, timestamp
+    instrument = 10
+
+def push11_handler(timestamp, address, types, val):
+    display "push11", address, types, val, timestamp
+    instrument = 11
+
+def push12_handler(timestamp, address, types, val):
+    display "push12", address, types, val, timestamp
+    instrument = 12
+
+
 
 def o2_poll_fn():
     o2_poll()

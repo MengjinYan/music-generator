@@ -236,8 +236,8 @@ def fit_scale(notes_list):
         notes_list[i].pitch = notes_list[i].pitch +
             new_note_index - note_index
 
-        if notes_list[i].pitch > 60: 
-            notes_list[i].pitch = notes_list[i].pitch - 12
+        # if notes_list[i].pitch > 60: 
+        #     notes_list[i].pitch = notes_list[i].pitch - 12
 
     return notes_list
 
@@ -274,11 +274,30 @@ def fit_chord(notes_list):
                         new_note_index - note_index
                 p = p + 0.2
 
-            if notes_list[i].pitch > 60: 
-                notes_list[i].pitch = notes_list[i].pitch - 12
+            # if notes_list[i].pitch > 60: 
+            #     notes_list[i].pitch = notes_list[i].pitch - 12
 
     display "fit_chord, done"
     return notes_list
+
+def fid_bound(notes_list):
+    program_idx = instrument - 1
+    if octave > 0.7:
+        program_high_bound = PROGRAM_LIST[program_idx].scale[1]
+        program_low_bound = program_high_bound - 24
+    elif octave < 0.3:
+        program_low_bound = PROGRAM_LIST[program_idx].scale[0]
+        program_high_bound = program_low_bound + 24
+    else:
+        program_high_bound = PROGRAM_LIST[program_idx].scale[1] - 12
+        program_low_bound = PROGRAM_LIST[program_idx].scale[0] + 12
+
+    for i = 0 to len(notes_list):
+        while notes_list[i].pitch > program_high_bound:
+            notes_list[i].pitch = notes_list[i].pitch - 12
+        while notes_list[i].pitch < program_low_bound:
+            notes_list[i].pitch = notes_list[i].pitch + 12
+
 
 def fit_measure(note_queue):
     display "fit_measure", the_sched.time
@@ -314,6 +333,9 @@ def fit_measure(note_queue):
 
     # fit chord
     notes = fit_chord(notes)
+
+    # fit high/low bound
+    notes = fit_bound(notes)
 
     measure.notes = Queue()
     measure.notes.push_list(notes)

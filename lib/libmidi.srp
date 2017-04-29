@@ -28,11 +28,26 @@ class Midi:
         midi_write(_midi, 0, chr(midi_status_note_on + channel) + chr(pitch) + chr(velocity))
 
     def note_off(channel, pitch):
-        channel = channel & 15
+        channel = channel & 1
         midi_write(_midi, 0, chr(midi_status_note_on + channel) + chr(pitch) + chr(0))
     
     def close():
         midi_close(_midi)
+
+
+class Program:
+    var button_id
+    var number
+    var msb
+    var lsb
+    var scale
+
+    def init(button_id_, number_, msb_, lsb_, scale_):
+        button_id = button_id_
+        number = number_
+        msb = msb_
+        lsb = lsb_
+        scale = scale_
 
 
 class Note:

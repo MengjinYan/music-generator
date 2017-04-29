@@ -361,10 +361,7 @@ def fit_and_play(midi):
         var queue = note_queues[i]
         var measure = fit_measure(queue)
         if measure is not nil:
-            if i == 0:
-                measure.play(midi, 0, volume1)
-            if i == 1:
-                measure.play(midi, 0, volume2)
+            measure.play(midi, 0, i)
                 
     # var measure = fit_measure(note_queues[0])
     # if measure is not nil:

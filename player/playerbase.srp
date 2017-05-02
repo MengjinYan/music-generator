@@ -77,7 +77,7 @@ def main():
     o2_initialize(APPLICATION, false)
     o2_service_new(SERVICE)
     o2_service_new(OSC_SERVICE)
-    o2_clock_set()
+    # o2_clock_set()
     rslt = o2_osc_port_new(OSC_SERVICE, OSC_PORT, false)
     if rslt != 0: // an error occurred
         display "in osc monitor, o2_osc_port_new returned ERROR", rslt
@@ -136,29 +136,29 @@ def player_init():
     # Initialize program list
     for i = 0 to PROGRAM_NUM:
         if i == 0: // Melody Instrument: Piano
-            program = Program(1, 1, 121, 0, [23, 110])
+            program = Program(1, 0, 121, 0, [23, 110])
         elif i == 1: // Melody Instrument: Ice Rain
-            program = Program(2, 97, 121, 0, [35, 84])
+            program = Program(2, 96, 121, 0, [23, 100])
         elif i == 2: // Melody Instrument: Vibraphone
-            program = Program(3, 12, 121, 0, [23, 105])
+            program = Program(3, 11, 121, 0, [23, 105])
         elif i == 3: // Melody Instrument: Strings
-            program = Program(4, 49, 121, 0, [35, 83])
+            program = Program(4, 48, 121, 0, [23, 100])
         elif i == 4: // Melody Instrument: Doctor Solo
-            program = Program(5, 82, 121, 8, [35, 83])
+            program = Program(5, 81, 121, 8, [23, 100])
         elif i == 5: // Meloday Instrument: Kalimba
-            program = Program(6, 109, 121, 0, [35, 96])
+            program = Program(6, 108, 121, 0, [23, 100])
         elif i == 6: // Percussion Instrument: Jazz
-            program = Program(7, 33, 120, 0, [27, 87])
+            program = Program(7, 32, 120, 0, [27, 87])
         elif i == 7: // Percussion Instrument: Electronic
-            program = Program(8, 25, 120, 0, [27, 87])
+            program = Program(8, 24, 120, 0, [27, 87])
         elif i == 8: // Percussion Instrument: Orchestra
-            program = Program(9, 49, 120, 0, [27, 88])
+            program = Program(9, 48, 120, 0, [27, 88])
         elif i == 9: // Percussion Instrument: Gun shot
-            program = Program(10, 128, 121, 0, [20, 60])
+            program = Program(10, 127, 121, 0, [20, 60])
         elif i == 10: // Percussion Instrument: Door
-            program = Program(11, 125, 121, 3, [20, 70])
+            program = Program(11, 124, 121, 3, [20, 70])
         else: // Percussion Instrument: Telephone 1
-            program = Program(12, 125, 121, 0, [20, 80])
+            program = Program(12, 124, 121, 0, [20, 80])
 
         PROGRAM_LIST.append(program)
 

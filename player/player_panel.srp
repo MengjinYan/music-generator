@@ -79,7 +79,7 @@ class Player_panel:
 
         ry = ry + TEXT_H + 10
         laten_slid = Fancy_slider(win, "Latency", x, ry, STAGE_WIDTH,
-                                  25, 60, -100, 100, 0, 'integer')
+                                  25, 60, -100, 300, 0, 'integer')
         laten_slid.method = 'latency_handler'
         if get_os() == 'windows':
             update_font(8)

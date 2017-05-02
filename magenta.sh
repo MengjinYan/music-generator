@@ -1,1 +1,0 @@
-melody_rnn_generate --config=lookback_rnn --bundle_file=/Users/yanmengjin1/software/lookback_rnn.mag --output_dir=./output/ --num_outputs=2 --num_steps=120 --primer_melody=[60,-2] >> log

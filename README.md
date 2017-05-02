@@ -49,7 +49,7 @@ There are 3 kinds of of controls available through TouchOSC:
    
 The labeled layout is as follows:
 
-<img src="layout.png" width="48">
+<img src="layout.png" width="480">
 
 
 ## Design Document
